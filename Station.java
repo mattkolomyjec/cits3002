@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+// import java.net.DatagramSocket;
 
 public class Station {
 
@@ -53,7 +54,15 @@ public class Station {
      * @return
      */
     public void sendNextNodeDestinations(String[] destinations) {
-
+        /*
+         * DatagramSocket datagramSocket = new DatagramSocket();
+         * 
+         * byte[] buffer = "0123456789".getBytes(); InetAddress receiverAddress =
+         * InetAddress.getLocalHost();
+         * 
+         * DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
+         * receiverAddress, 80); datagramSocket.send(packet);
+         */
     }
 
     // ###############################################################################
@@ -75,12 +84,29 @@ public class Station {
     }
 
     // ###############################################################################
+    // throw an exception if incorrect parameters are found
     public static void main(String args[]) {
-        String origin = args[1];
-        int[] ports = new int[args.length];
-        for (int i = 1; i < ports.length; i++) {
-            ports[i - 1] = Integer.parseInt(args[i]);
-        }
+        String origin = args[0];
+        int latitude = Integer.parseInt(args[1]);
+        int longitude = Integer.parseInt(args[2]);
+        int webPort = Integer.parseInt(args[3]);
+        int stationDatagrams = Integer.parseInt(args[4]);
 
+        int[] otherStationDatagrams = new int[args.length - 5];
+        int otherIndex = 5;
+        for (int i = 0; i < otherStationDatagrams.length; i++) {
+            otherStationDatagrams[i] = Integer.parseInt(args[otherIndex]);
+            otherIndex++;
+        }
+        /*
+         * System.out.printf("%s\n", origin); System.out.printf("%d\n", latitude);
+         * System.out.printf("%d\n", longitude); System.out.printf("%d\n", webPort);
+         * System.out.printf("%d\n", stationDatagrams);
+         * 
+         * for (int i = 0; i < otherStationDatagrams.length; i++) {
+         * System.out.printf("%d\n", otherStationDatagrams[i]);
+         * 
+         * }
+         */
     }
 }
