@@ -23,6 +23,15 @@ public class Station {
 
     // ###############################################################################
     /**
+     * A method to read the timetable data in for a given station and store it in
+     * the Station Object variables.
+     */
+    public void readTimetableIn() {
+
+    }
+
+    // ###############################################################################
+    /**
      * A method to check whether the current station is the final destination
      * 
      * @return boolean indicating whether the current station is the final station
@@ -98,15 +107,5 @@ public class Station {
             otherStationDatagrams[i] = Integer.parseInt(args[otherIndex]);
             otherIndex++;
         }
-        /*
-         * System.out.printf("%s\n", origin); System.out.printf("%d\n", latitude);
-         * System.out.printf("%d\n", longitude); System.out.printf("%d\n", webPort);
-         * System.out.printf("%d\n", stationDatagrams);
-         * 
-         * for (int i = 0; i < otherStationDatagrams.length; i++) {
-         * System.out.printf("%d\n", otherStationDatagrams[i]);
-         * 
-         * }
-         */
     }
 }
