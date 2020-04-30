@@ -1,5 +1,6 @@
 import java.util.ArrayList;
-import java.net.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.io.*;
 // import java.net.DatagramSocket;
 
@@ -13,14 +14,16 @@ public class Station {
                              // the same as Path
     String[] destinations; // The names of the destinations available directly from the currentStation
 
-    public Station(String origin, String requiredDestination, String currentStation, ArrayList<String> path,
-            ArrayList<String> times, String[] destinations) {
+    /*
+     * String origin, String requiredDestination, String currentStation,
+     * ArrayList<String> path, ArrayList<String> times, String[] destinations)
+     * this.origin = origin; this.requiredDestination = requiredDestination;
+     * this.currentStation = currentStation; this.path = path; this.times = times;
+     * this.destinations = destinations;
+     */
+    public Station(String origin) {
         this.origin = origin;
-        this.requiredDestination = requiredDestination;
-        this.currentStation = currentStation;
-        this.path = path;
-        this.times = times;
-        this.destinations = destinations;
+
     }
 
     // ###############################################################################
@@ -94,9 +97,33 @@ public class Station {
         }
     }
 
+    public void run(int port) throws IOException {
+        ServerSocket serverSocket = new ServerSocket(port);
+        while (true) {
+            try {
+                System.out.println("Waiting for client on port " + serverSocket.getLocalPort() + "...");
+                Socket server = serverSocket.accept();
+
+                System.out.println("Just connected to " + server.getRemoteSocketAddress());
+                DataInputStream in = new DataInputStream(server.getInputStream());
+
+                System.out.println(in.readUTF());
+                // read in data into arrays here
+
+                DataOutputStream out = new DataOutputStream(server.getOutputStream());
+                out.writeUTF("Thank you for connecting to " + server.getLocalSocketAddress() + "\nGoodbye!");
+                server.close();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                break;
+            }
+        }
+    }
+
     // ###############################################################################
     // throw an exception if incorrect parameters are found
-    public static void main(String args[]) throws IOException {
+    public static void main(String args[]) {
         String origin = args[0];
         int webPort = Integer.parseInt(args[1]);
         int stationDatagrams = Integer.parseInt(args[2]);
@@ -107,18 +134,21 @@ public class Station {
             otherStationDatagrams[i] = Integer.parseInt(args[otherIndex]);
             otherIndex++;
         }
-
-        try (ServerSocket serverSocket = new ServerSocket(webPort);
-                // System.out.println("Waiting for server on:");
-                Socket clientSocket = serverSocket.accept();
-
-                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) {
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                out.println(inputLine);
-            }
+        try {
+            Station station = new Station(origin);
+            station.run(webPort);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        /*
+         * try (ServerSocket serverSocket = new ServerSocket(webPort); Socket
+         * clientSocket = serverSocket.accept(); PrintWriter out = new
+         * PrintWriter(clientSocket.getOutputStream(), true); BufferedReader in = new
+         * BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) {
+         * String inputLine; while ((inputLine = in.readLine()) != null) {
+         * out.println(inputLine); } }
+         */
 
     }
 }
