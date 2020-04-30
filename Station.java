@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.net.*;
+import java.io.*;
 // import java.net.DatagramSocket;
 
 public class Station {
@@ -94,18 +96,29 @@ public class Station {
 
     // ###############################################################################
     // throw an exception if incorrect parameters are found
-    public static void main(String args[]) {
+    public static void main(String args[]) throws IOException {
         String origin = args[0];
-        int latitude = Integer.parseInt(args[1]);
-        int longitude = Integer.parseInt(args[2]);
-        int webPort = Integer.parseInt(args[3]);
-        int stationDatagrams = Integer.parseInt(args[4]);
+        int webPort = Integer.parseInt(args[1]);
+        int stationDatagrams = Integer.parseInt(args[2]);
 
-        int[] otherStationDatagrams = new int[args.length - 5];
-        int otherIndex = 5;
+        int[] otherStationDatagrams = new int[args.length - 3];
+        int otherIndex = 3;
         for (int i = 0; i < otherStationDatagrams.length; i++) {
             otherStationDatagrams[i] = Integer.parseInt(args[otherIndex]);
             otherIndex++;
         }
+
+        try (ServerSocket serverSocket = new ServerSocket(webPort);
+                // System.out.println("Waiting for server on:");
+                Socket clientSocket = serverSocket.accept();
+
+                PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) {
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                out.println(inputLine);
+            }
+        }
+
     }
 }
