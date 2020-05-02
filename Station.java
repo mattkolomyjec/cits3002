@@ -115,7 +115,8 @@ public class Station {
                     out.write("<br><u>" + body.toString() + "</u>");
                 } else {
                     out.write("<form method='POST'>");
-                    out.write("<input name='name' type='text'/>");
+                    out.write("<input name='origin' type='text'/>");
+                    out.write("<input name='destination' type='text'/>");
                     out.write("<input type='submit'/>");
                     out.write("</form>");
                 }
