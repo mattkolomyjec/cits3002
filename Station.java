@@ -1,8 +1,12 @@
 import java.util.ArrayList;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.*;
-// import java.net.DatagramSocket;
+import java.net.DatagramSocket;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.util.Date;
 
 public class Station {
 
@@ -50,69 +54,76 @@ public class Station {
     }
 
     // ###############################################################################
-    /**
-     * A used by the station to receive a list of destinations from a requested node
-     * 
-     * @param origin
-     * @return desintations[]
-     */
-    public String[] receiveNextNodeDestinations(String origin) {
-        return null;
-    }
-
-    /***
-     * A method used by the station to send its list of destinations to another node
-     * requesting it
-     * 
-     * @param destinations
-     * @return
-     */
-    public void sendNextNodeDestinations(String[] destinations) {
+    public String sendDatagrams(String origin, String destination, String times) {
+        // Each line must have a separate "stop" and the time it reached such a stop
         /*
-         * DatagramSocket datagramSocket = new DatagramSocket();
+         * DatagramSocket ds = new DatagramSocket(); String str = "Welcome java";
+         * InetAddress ip = InetAddress.getByName("127.0.0.1");
          * 
-         * byte[] buffer = "0123456789".getBytes(); InetAddress receiverAddress =
-         * InetAddress.getLocalHost();
-         * 
-         * DatagramPacket packet = new DatagramPacket(buffer, buffer.length,
-         * receiverAddress, 80); datagramSocket.send(packet);
+         * DatagramPacket dp = new DatagramPacket(str.getBytes(), str.length(), ip,
+         * 3000); ds.send(dp); ds.close();
          */
+        return "";
     }
-
     // ###############################################################################
 
-    public void sendToNextNode(String origin, String desintation) {
-
-    }
-
-    public Object receieveFromNode() {
-        return null;
-        // Create Station Object with data sent in
-    }
-
-    public void sendToPage() {
-        if (isFinalStation()) {
-            // Update PathList and TimesList
-            // HTML POST TO USER PAGE
-        }
-    }
+    private static final String OUTPUT = "<html><head><title>Example</title></head><body><p>Worked!!!</p></body></html>";
+    private static final String OUTPUT_HEADERS = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/html\r\n"
+            + "Content-Length: ";
+    private static final String OUTPUT_END_OF_HEADERS = "\r\n\r\n";
 
     public void run(int port) throws IOException {
         ServerSocket serverSocket = new ServerSocket(port);
         while (true) {
             try {
-                System.out.println("Waiting for client on port " + serverSocket.getLocalPort() + "...");
-                Socket server = serverSocket.accept();
-
-                System.out.println("Just connected to " + server.getRemoteSocketAddress());
-                DataInputStream in = new DataInputStream(server.getInputStream());
-
-                System.out.println(in.readUTF());
-                // read in data into arrays here
-
-                DataOutputStream out = new DataOutputStream(server.getOutputStream());
-                out.writeUTF("Thank you for connecting to " + server.getLocalSocketAddress() + "\nGoodbye!");
-                server.close();
+                Socket socket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                // read request
+                String line;
+                line = in.readLine();
+                StringBuilder raw = new StringBuilder();
+                raw.append("" + line);
+                boolean isPost = line.startsWith("POST");
+                int contentLength = 0;
+                while (!(line = in.readLine()).equals("")) {
+                    raw.append('\n' + line);
+                    if (isPost) {
+                        final String contentHeader = "Content-Length: ";
+                        if (line.startsWith(contentHeader)) {
+                            contentLength = Integer.parseInt(line.substring(contentHeader.length()));
+                        }
+                    }
+                }
+                StringBuilder body = new StringBuilder();
+                if (isPost) {
+                    int c = 0;
+                    for (int i = 0; i < contentLength; i++) {
+                        c = in.read();
+                        body.append((char) c);
+                        // Log.d("JCD", "POST: " + ((char) c) + " " + c);
+                    }
+                }
+                raw.append(body.toString());
+                // publishProgress(raw.toString());
+                // send response
+                out.write("HTTP/1.1 200 OK\r\n");
+                out.write("Content-Type: text/html\r\n");
+                out.write("\r\n");
+                out.write(new Date().toString());
+                if (isPost) {
+                    out.write("<br><u>" + body.toString() + "</u>");
+                } else {
+                    out.write("<form method='POST'>");
+                    out.write("<input name='name' type='text'/>");
+                    out.write("<input type='submit'/>");
+                    out.write("</form>");
+                }
+                // System.out.println(in.readLine());
+                // do not in.close();
+                out.flush();
+                out.close();
+                socket.close();
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -122,8 +133,11 @@ public class Station {
     }
 
     // ###############################################################################
-    // throw an exception if incorrect parameters are found
     public static void main(String args[]) {
+        if (args.length < 4) {
+            throw new IllegalArgumentException(
+                    "ERROR: Invalid input! Correct input follows: {Station Name} {Web Port Number} {Datagram Receipt Port Number} {Next Station Port Number(s)}");
+        }
         String origin = args[0];
         int webPort = Integer.parseInt(args[1]);
         int stationDatagrams = Integer.parseInt(args[2]);
@@ -140,15 +154,6 @@ public class Station {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        /*
-         * try (ServerSocket serverSocket = new ServerSocket(webPort); Socket
-         * clientSocket = serverSocket.accept(); PrintWriter out = new
-         * PrintWriter(clientSocket.getOutputStream(), true); BufferedReader in = new
-         * BufferedReader(new InputStreamReader(clientSocket.getInputStream()));) {
-         * String inputLine; while ((inputLine = in.readLine()) != null) {
-         * out.println(inputLine); } }
-         */
 
     }
 }
