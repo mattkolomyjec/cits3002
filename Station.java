@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.*;
@@ -7,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.Date;
+import java.util.Scanner;
 
 public class Station {
 
@@ -35,8 +35,12 @@ public class Station {
      * A method to read the timetable data in for a given station and store it in
      * the Station Object variables.
      */
-    public void readTimetableIn() {
+    public void readTimetableIn() throws FileNotFoundException {
+        File file = new File("routes.txt");
+        Scanner sc = new Scanner(file);
 
+        while (sc.hasNextLine())
+            System.out.println(sc.nextLine());
     }
 
     // ###############################################################################
@@ -151,6 +155,7 @@ public class Station {
         }
         try {
             Station station = new Station(origin);
+            station.readTimetableIn();
             station.run(webPort);
         } catch (IOException e) {
             e.printStackTrace();
