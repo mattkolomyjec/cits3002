@@ -27,8 +27,8 @@ public class Station {
 
     // ###############################################################################
     /**
-     * A method to read the timetable data in for a given station and store it in
-     * the Station Object variables.
+     * A method to read the timetable data in froma text file and store it in an
+     * ArrayList
      */
     public void readTimetableIn() throws FileNotFoundException {
         File file = new File("routes.txt");
@@ -46,6 +46,24 @@ public class Station {
             }
         }
         sc.close();
+    }
+
+    // ###############################################################################
+    /***
+     * A method to check if the required destination is directly connected to the
+     * current station
+     * 
+     * @return boolean indicataing if there is a direct connection to the required
+     *         destination
+     */
+    public boolean hasDirectConnection() {
+        boolean result = false;
+        for (int i = 0; i < destinations.size(); i++) {
+            if ((destinations.get(i)).contains(requiredDestination)) {
+                result = true;
+            }
+        }
+        return result;
     }
 
     // ###############################################################################
