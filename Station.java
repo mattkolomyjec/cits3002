@@ -129,6 +129,13 @@ public class Station {
         return result;
     }
 
+    /***
+     * A method to send and receive datagram to other station servers
+     * 
+     * @param message
+     * @param port
+     * @throws SocketException
+     */
     public void datagrams(String message, int port) throws SocketException {
         DatagramSocket skt;
         try {
@@ -254,6 +261,7 @@ public class Station {
 
     }
 }
+
 // Protocol
 
 // Outgoing/Incoming (whether it has reached final destination yet or not)
