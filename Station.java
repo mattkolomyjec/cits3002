@@ -12,11 +12,15 @@ public class Station {
 
     String origin; // The node where the user started
     String requiredDestination; // The intended destination of the user
-    String currentStation; // The name of the current stop
+
     ArrayList<String> path; // The names of the nodes taken thus far to get to where we are
     ArrayList<String> times; // The times of departure from each node to get where we are thus far, indexed
                              // the same as Path
-    String[] destinations; // The names of the destinations available directly from the currentStation
+
+    String currentStation;
+    String latitude;
+    String longitude;
+    ArrayList<String> destinations = new ArrayList<String>();
 
     /*
      * String origin, String requiredDestination, String currentStation,
@@ -39,8 +43,17 @@ public class Station {
         File file = new File("routes.txt");
         Scanner sc = new Scanner(file);
 
-        while (sc.hasNextLine())
-            System.out.println(sc.nextLine());
+        String temp[] = ((sc.nextLine()).split(","));
+        currentStation = temp[0];
+        latitude = temp[1];
+        longitude = temp[2];
+
+        while (sc.hasNextLine()) {
+            String tempRoutes[] = ((sc.nextLine()).split(","));
+            for (int i = 0; i < tempRoutes.length; i++) {
+                destinations.add(tempRoutes[i]);
+            }
+        }
     }
 
     // ###############################################################################
