@@ -20,6 +20,12 @@ public class Station {
     String longitude;
     ArrayList<String> destinations = new ArrayList<String>();
 
+    // ###############################################################################
+    /***
+     * Create an instance of the Station object
+     * 
+     * @param currentStation
+     */
     public Station(String currentStation) {
         this.currentStation = currentStation;
 
@@ -80,6 +86,27 @@ public class Station {
         return result;
     }
 
+    /***
+     * A method to extract the required destination from the body parsed in the
+     * following format: origin={EXTRACT}&destination={EXTRACT}
+     * 
+     * @param body
+     */
+    public void separateUserInputs(String body) {
+        String[] temp = body.split("(?!^)");
+        int middleIndex = 0;
+        int endIndex = 0;
+        for (int i = 0; i < temp.length; i++) {
+            if (temp[i].contains("&")) {
+                middleIndex = i;
+            }
+            if (temp[i].contains("=")) {
+                endIndex = i + 1;
+            }
+        }
+        requiredDestination = body.substring(endIndex);
+    }
+
     // ###############################################################################
     public String sendDatagrams(String origin, String destination, String times) {
         // Each line must have a separate "stop" and the time it reached such a stop
@@ -127,6 +154,7 @@ public class Station {
                     }
                 }
                 raw.append(body.toString());
+                separateUserInputs(body.toString());
                 // publishProgress(raw.toString());
                 // send response
                 out.write("HTTP/1.1 200 OK\r\n");
