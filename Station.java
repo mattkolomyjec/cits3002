@@ -10,7 +10,7 @@ import java.util.Scanner;
 
 public class Station {
 
-    String requiredDestination; // The intended destination of the user
+    String requiredDestination; // The intended destination of the user. WILL CAPS LOCK AFFECT THIS?
 
     ArrayList<String> path; // The names of the nodes taken thus far to get to where we are
     ArrayList<String> times; // The times of departure from each node to get where we are thus far, indexed
@@ -54,7 +54,6 @@ public class Station {
         sc.close();
     }
 
-    // ###############################################################################
     /***
      * A method to check if the required destination is directly connected to the
      * current station
@@ -72,7 +71,6 @@ public class Station {
         return result;
     }
 
-    // ###############################################################################
     /**
      * A method to check whether the current station is the final destination
      * 
@@ -88,18 +86,14 @@ public class Station {
 
     /***
      * A method to extract the required destination from the body parsed in the
-     * following format: origin={EXTRACT}&destination={EXTRACT}
+     * following format: origin={GIVEN}&destination={EXTRACT}
      * 
      * @param body
      */
     public void separateUserInputs(String body) {
         String[] temp = body.split("(?!^)");
-        int middleIndex = 0;
         int endIndex = 0;
         for (int i = 0; i < temp.length; i++) {
-            if (temp[i].contains("&")) {
-                middleIndex = i;
-            }
             if (temp[i].contains("=")) {
                 endIndex = i + 1;
             }
@@ -208,6 +202,12 @@ public class Station {
 
     }
 }
+// Protocol
+
+// Destination, origin depature time
+// Station stopped at, Departure Time
+// Station stopped at, Departure Time
+// Station stopped at, Departure Time
 
 /*
  * 
