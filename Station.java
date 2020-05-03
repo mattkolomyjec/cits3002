@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.io.*;
 import java.net.DatagramSocket;
 import java.net.DatagramPacket;
@@ -102,21 +103,65 @@ public class Station {
     }
 
     // ###############################################################################
-    public String sendDatagrams(String origin, String destination, String times) {
-        // Each line must have a separate "stop" and the time it reached such a stop
-        /*
-         * DatagramSocket ds = new DatagramSocket(); String str = "Welcome java";
-         * InetAddress ip = InetAddress.getByName("127.0.0.1");
-         * 
-         * DatagramPacket dp = new DatagramPacket(str.getBytes(), str.length(), ip,
-         * 3000); ds.send(dp); ds.close();
-         */
-        return "";
+    /***
+     * Constructs a datagram to send based on the protcol created. The stops and
+     * departureTimes ArrayLists are indexed the same.
+     * 
+     * @param isOutgoing
+     * @param requiredDestination
+     * @param originDepartureTime
+     * @param stops
+     * @param departureTimes
+     * @return result a string ready to be sent
+     */
+    public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
+            ArrayList<String> stops, ArrayList<String> departureTimes) {
+        String result;
+        if (isOutgoing) {
+            result = "Outgoing\n";
+        } else {
+            result = "Incoming\n";
+        }
+        result += requiredDestination + " " + originDepartureTime + "\n";
+        for (int i = 0; i < stops.size(); i++) {
+            result += stops.get(i) + " " + departureTimes.get(i) + "\n";
+        }
+        return result;
     }
-    // ###############################################################################
 
-    public void run(int port) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(port);
+    public void datagrams(String message, int port) throws SocketException {
+        DatagramSocket skt;
+        try {
+            // Sending the Datagram
+            skt = new DatagramSocket();
+            byte[] b = message.getBytes();
+            InetAddress host = InetAddress.getByName("localhost");
+            DatagramPacket request = new DatagramPacket(b, b.length, host, port);
+            skt.send(request);
+
+            // Receiveing the Datagram
+            byte[] buffer = new byte[1000];
+            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+            skt.receive(reply);
+            String result = new String(reply.getData());
+            // System.out.println(new String(reply.getData()));
+            System.out.println(result);
+            skt.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ###############################################################################
+    /**
+     * A method to run the core socket server.
+     * 
+     * @param port
+     * @throws IOException
+     */
+    public void run(int webPort, int[] datagramPorts) throws IOException {
+        ServerSocket serverSocket = new ServerSocket(webPort);
         while (true) {
             try {
                 Socket socket = serverSocket.accept();
@@ -149,6 +194,13 @@ public class Station {
                 }
                 raw.append(body.toString());
                 separateUserInputs(body.toString());
+
+                // Flood the network with datagram requests
+                /*
+                 * for (int i = 0; i < datagramPorts.length; i++) {
+                 * datagrams(requiredDestination, datagramPorts[i]); }
+                 */
+
                 // publishProgress(raw.toString());
                 // send response
                 out.write("HTTP/1.1 200 OK\r\n");
@@ -195,7 +247,7 @@ public class Station {
         try {
             Station station = new Station(origin);
             station.readTimetableIn();
-            station.run(webPort);
+            station.run(webPort, otherStationDatagrams);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -204,10 +256,18 @@ public class Station {
 }
 // Protocol
 
+// Outgoing/Incoming (whether it has reached final destination yet or not)
 // Destination, origin depature time
 // Station stopped at, Departure Time
 // Station stopped at, Departure Time
 // Station stopped at, Departure Time
+/*
+ * ArrayList<String> destinations = new ArrayList<String>(); ArrayList<String>
+ * times = new ArrayList<String>(); destinations.add("Subiaco");
+ * destinations.add("Thornlie"); times.add("09:00"); times.add("15:00");
+ * System.out.println(station.constructDatagram(true, "Warwick-Stn", "9am",
+ * destinations, times));
+ */
 
 /*
  * 
@@ -217,4 +277,18 @@ public class Station {
  * "Content-Type: text/html\r\n" + "Content-Length: "; private static final
  * String OUTPUT_END_OF_HEADERS = "\r\n\r\n";
  * 
+ */
+/*
+ * DatagramSocket serverSocket = new DatagramSocket(port); byte[] receiveData =
+ * new byte[1024]; byte[] sendData = new byte[1024];
+ * 
+ * // receiving: DatagramPacket receivePacket = new DatagramPacket(receiveData,
+ * receiveData.length); serverSocket.receive(receivePacket);
+ * 
+ * InetAddress callerIPAddress = receivePacket.getAddress(); int callerPort =
+ * receivePacket.getPort();
+ * 
+ * // sending: sendData = "ciao".getBytes(); DatagramPacket sendPacket = new
+ * DatagramPacket(sendData, sendData.length, callerIPAddress, callerPort);
+ * serverSocket.send(sendPacket);
  */
