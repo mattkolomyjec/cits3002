@@ -227,6 +227,7 @@ public class Station {
                 out.flush();
                 out.close();
                 socket.close();
+                serverSocket.close();
 
             } catch (IOException e) {
                 e.printStackTrace();
