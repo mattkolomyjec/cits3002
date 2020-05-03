@@ -10,27 +10,18 @@ import java.util.Scanner;
 
 public class Station {
 
-    String origin; // The node where the user started
     String requiredDestination; // The intended destination of the user
 
     ArrayList<String> path; // The names of the nodes taken thus far to get to where we are
     ArrayList<String> times; // The times of departure from each node to get where we are thus far, indexed
                              // the same as Path
-
     String currentStation;
     String latitude;
     String longitude;
     ArrayList<String> destinations = new ArrayList<String>();
 
-    /*
-     * String origin, String requiredDestination, String currentStation,
-     * ArrayList<String> path, ArrayList<String> times, String[] destinations)
-     * this.origin = origin; this.requiredDestination = requiredDestination;
-     * this.currentStation = currentStation; this.path = path; this.times = times;
-     * this.destinations = destinations;
-     */
-    public Station(String origin) {
-        this.origin = origin;
+    public Station(String currentStation) {
+        this.currentStation = currentStation;
 
     }
 
@@ -54,6 +45,7 @@ public class Station {
                 destinations.add(tempRoutes[i]);
             }
         }
+        sc.close();
     }
 
     // ###############################################################################
@@ -83,11 +75,6 @@ public class Station {
         return "";
     }
     // ###############################################################################
-
-    private static final String OUTPUT = "<html><head><title>Example</title></head><body><p>Worked!!!</p></body></html>";
-    private static final String OUTPUT_HEADERS = "HTTP/1.1 200 OK\r\n" + "Content-Type: text/html\r\n"
-            + "Content-Length: ";
-    private static final String OUTPUT_END_OF_HEADERS = "\r\n\r\n";
 
     public void run(int port) throws IOException {
         ServerSocket serverSocket = new ServerSocket(port);
@@ -137,7 +124,6 @@ public class Station {
                     out.write("<input type='submit'/>");
                     out.write("</form>");
                 }
-                // System.out.println(in.readLine());
                 // do not in.close();
                 out.flush();
                 out.close();
@@ -176,3 +162,13 @@ public class Station {
 
     }
 }
+
+/*
+ * 
+ * private static final String OUTPUT =
+ * "<html><head><title>Example</title></head><body><p>Worked!!!</p></body></html>";
+ * private static final String OUTPUT_HEADERS = "HTTP/1.1 200 OK\r\n" +
+ * "Content-Type: text/html\r\n" + "Content-Length: "; private static final
+ * String OUTPUT_END_OF_HEADERS = "\r\n\r\n";
+ * 
+ */
