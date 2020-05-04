@@ -38,7 +38,7 @@ public class Station {
 
     // ###############################################################################
     /**
-     * A method to read the timetable data in froma text file and store it in an
+     * y A method to read the timetable data in froma text file and store it in an
      * ArrayList
      */
     public void readTimetableIn() throws FileNotFoundException {
@@ -271,7 +271,6 @@ public class Station {
                 out.flush();
                 out.close();
                 socket.close();
-                serverSocket.close();
 
             } catch (IOException e) {
                 e.printStackTrace();
