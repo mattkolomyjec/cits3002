@@ -24,16 +24,21 @@ public class Station {
     String latitude;
     String longitude;
     ArrayList<String> destinations = new ArrayList<String>();
+    int receivingDatagram;
+    int[] otherStationDatagrams;
 
     // ###############################################################################
-    /***
-     * Create an instance of the Station object
+    /**
+     * Create an instance of Station object.
      * 
      * @param currentStation
+     * @param receivingDatagram
+     * @param otherStationDatagrams
      */
-    public Station(String currentStation) {
+    public Station(String currentStation, int receivingDatagram, int[] otherStationDatagrams) {
         this.currentStation = currentStation;
-
+        this.receivingDatagram = receivingDatagram;
+        this.otherStationDatagrams = otherStationDatagrams;
     }
 
     // ###############################################################################
@@ -296,13 +301,12 @@ public class Station {
             otherIndex++;
         }
         try {
-            Station station = new Station(origin);
+            Station station = new Station(origin, stationDatagrams, otherStationDatagrams);
             station.readTimetableIn();
             station.run(webPort, otherStationDatagrams);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 }
 
