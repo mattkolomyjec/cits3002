@@ -17,7 +17,8 @@ public class Station {
     String originDepartureTime;
     int numberStationsStoppedAt;
     ArrayList<String> path = new ArrayList<String>(); // The names of the nodes taken thus far to get to where we are
-    ArrayList<String> times = new ArrayList<String>(); // The arrival time to each node on the journey
+    ArrayList<String> departureTimes = new ArrayList<String>(); // The depature times to each node on the journey
+    ArrayList<String> arrivalTimes = new ArrayList<String>(); // The depature times to each node on the journey
 
     // Station Variables
     String currentStation;
@@ -125,7 +126,8 @@ public class Station {
      * @return result a string ready to be sent
      */
     public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
-            int numberStationsStoppedAt, ArrayList<String> path, ArrayList<String> times) {
+            int numberStationsStoppedAt, ArrayList<String> path, ArrayList<String> departureTimes,
+            ArrayList<String> arrivalTimes) {
         String result;
         if (isOutgoing) {
             result = "Outgoing \n";
@@ -134,7 +136,7 @@ public class Station {
         }
         result += requiredDestination + " " + originDepartureTime + " " + numberStationsStoppedAt + " \n";
         for (int i = 0; i < path.size(); i++) {
-            result += path.get(i) + " " + times.get(i) + " \n";
+            result += path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i) + " \n";
         }
         return result;
     }
@@ -148,7 +150,8 @@ public class Station {
         originDepartureTime = "";
         numberStationsStoppedAt = 0;
         path.clear();
-        times.clear();
+        departureTimes.clear();
+        arrivalTimes.clear();
     }
 
     /***
@@ -169,12 +172,15 @@ public class Station {
         numberStationsStoppedAt = Integer.parseInt(temp[3]);
 
         int pathIndex = 4;
-        int timeIndex = 5;
+        int departureIndex = 5;
+        int arrivalIndex = 6;
         for (int i = 0; i < numberStationsStoppedAt; i++) {
             path.add(temp[pathIndex]);
-            pathIndex += 2;
-            times.add(temp[timeIndex]);
-            timeIndex += 2;
+            pathIndex += 3;
+            departureTimes.add(temp[departureIndex]);
+            departureIndex += 3;
+            arrivalTimes.add(temp[arrivalIndex]);
+            arrivalIndex += 3;
         }
     }
 
@@ -314,20 +320,25 @@ public class Station {
 
 // Outgoing/Incoming (whether it has reached final destination yet or not)
 // Destination, origin depature time, number of stations stopped at
-// Station stopped at, Arrival Time
-// Station stopped at, Arrival Time
-// Station stopped at, Arrival Time
+// Station stopped at, Departure Time, Arrival Time
+// Station stopped at, Departure Time, Arrival Time
+// Station stopped at, Departure Time, Arrival Time
 
 // Testing Variables
+
 // ArrayList<String> destinations = new ArrayList<String>();
-// ArrayList<String> times = new ArrayList<String>();
+// ArrayList<String> departureTimes = new ArrayList<String>();
+// ArrayList<String> arrivalTimes = new ArrayList<String>();
 // destinations.add("Subiaco");
 // destinations.add("Thornlie");
-// times.add("09:00");
-// times.add("15:00");
+// departureTimes.add("09:00");
+// departureTimes.add("09:45");
+// arrivalTimes.add("09:10");
+// arrivalTimes.add("10:00");
 
-// String test = station.constructDatagram(true, "Fremantle", "9am", 2,
-// destinations, times);
-// System.out.println(test);
-
+// String test = station.constructDatagram(true, "Fremantle", "08:45", 2,
+// destinations, departureTimes,
+// arrivalTimes);
 // station.readDatagramIn(test);
+
+// System.out.println(test);
