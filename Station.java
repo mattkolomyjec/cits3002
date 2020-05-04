@@ -11,11 +11,15 @@ import java.util.Scanner;
 
 public class Station {
 
+    // Message Variables
     String requiredDestination; // The intended destination of the user. WILL CAPS LOCK AFFECT THIS?
+    boolean isOutgoing;
+    String originDepartureTime;
+    int numberStationsStoppedAt;
+    ArrayList<String> path = new ArrayList<String>(); // The names of the nodes taken thus far to get to where we are
+    ArrayList<String> times = new ArrayList<String>(); // The arrival time to each node on the journey
 
-    ArrayList<String> path; // The names of the nodes taken thus far to get to where we are
-    ArrayList<String> times; // The times of departure from each node to get where we are thus far, indexed
-                             // the same as Path
+    // Station Variables
     String currentStation;
     String latitude;
     String longitude;
@@ -67,6 +71,7 @@ public class Station {
         for (int i = 0; i < destinations.size(); i++) {
             if ((destinations.get(i)).contains(requiredDestination)) {
                 result = true;
+                break;
             }
         }
         return result;
@@ -105,7 +110,7 @@ public class Station {
     // ###############################################################################
     /***
      * Constructs a datagram to send based on the protcol created. The stops and
-     * departureTimes ArrayLists are indexed the same.
+     * arrivalTime ArrayLists are indexed the same.
      * 
      * @param isOutgoing
      * @param requiredDestination
@@ -115,18 +120,57 @@ public class Station {
      * @return result a string ready to be sent
      */
     public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
-            ArrayList<String> stops, ArrayList<String> departureTimes) {
+            int numberStationsStoppedAt, ArrayList<String> path, ArrayList<String> times) {
         String result;
         if (isOutgoing) {
-            result = "Outgoing\n";
+            result = "Outgoing \n";
         } else {
-            result = "Incoming\n";
+            result = "Incoming \n";
         }
-        result += requiredDestination + " " + originDepartureTime + "\n";
-        for (int i = 0; i < stops.size(); i++) {
-            result += stops.get(i) + " " + departureTimes.get(i) + "\n";
+        result += requiredDestination + " " + originDepartureTime + " " + numberStationsStoppedAt + " \n";
+        for (int i = 0; i < path.size(); i++) {
+            result += path.get(i) + " " + times.get(i) + " \n";
         }
         return result;
+    }
+
+    /***
+     * A method to reset the variables that hold the current message in hand
+     */
+    public void reset() {
+        isOutgoing = false;
+        requiredDestination = "";
+        originDepartureTime = "";
+        numberStationsStoppedAt = 0;
+        path.clear();
+        times.clear();
+    }
+
+    /***
+     * A method to read a datagram sent from another node in.
+     * 
+     * @param message the datagram sent in
+     */
+    public void readDatagramIn(String message) {
+        reset();
+        String temp[] = message.split(" ");
+        if (temp[0].contains("Outgoing")) {
+            isOutgoing = true;
+        } else {
+            isOutgoing = false;
+        }
+        requiredDestination = temp[1];
+        originDepartureTime = temp[2];
+        numberStationsStoppedAt = Integer.parseInt(temp[3]);
+
+        int pathIndex = 4;
+        int timeIndex = 5;
+        for (int i = 0; i < numberStationsStoppedAt; i++) {
+            path.add(temp[pathIndex]);
+            pathIndex += 2;
+            times.add(temp[timeIndex]);
+            timeIndex += 2;
+        }
     }
 
     /***
@@ -266,38 +310,21 @@ public class Station {
 // Protocol
 
 // Outgoing/Incoming (whether it has reached final destination yet or not)
-// Destination, origin depature time
-// Station stopped at, Departure Time
-// Station stopped at, Departure Time
-// Station stopped at, Departure Time
-/*
- * ArrayList<String> destinations = new ArrayList<String>(); ArrayList<String>
- * times = new ArrayList<String>(); destinations.add("Subiaco");
- * destinations.add("Thornlie"); times.add("09:00"); times.add("15:00");
- * System.out.println(station.constructDatagram(true, "Warwick-Stn", "9am",
- * destinations, times));
- */
+// Destination, origin depature time, number of stations stopped at
+// Station stopped at, Arrival Time
+// Station stopped at, Arrival Time
+// Station stopped at, Arrival Time
 
-/*
- * 
- * private static final String OUTPUT =
- * "<html><head><title>Example</title></head><body><p>Worked!!!</p></body></html>";
- * private static final String OUTPUT_HEADERS = "HTTP/1.1 200 OK\r\n" +
- * "Content-Type: text/html\r\n" + "Content-Length: "; private static final
- * String OUTPUT_END_OF_HEADERS = "\r\n\r\n";
- * 
- */
-/*
- * DatagramSocket serverSocket = new DatagramSocket(port); byte[] receiveData =
- * new byte[1024]; byte[] sendData = new byte[1024];
- * 
- * // receiving: DatagramPacket receivePacket = new DatagramPacket(receiveData,
- * receiveData.length); serverSocket.receive(receivePacket);
- * 
- * InetAddress callerIPAddress = receivePacket.getAddress(); int callerPort =
- * receivePacket.getPort();
- * 
- * // sending: sendData = "ciao".getBytes(); DatagramPacket sendPacket = new
- * DatagramPacket(sendData, sendData.length, callerIPAddress, callerPort);
- * serverSocket.send(sendPacket);
- */
+// Testing Variables
+// ArrayList<String> destinations = new ArrayList<String>();
+// ArrayList<String> times = new ArrayList<String>();
+// destinations.add("Subiaco");
+// destinations.add("Thornlie");
+// times.add("09:00");
+// times.add("15:00");
+
+// String test = station.constructDatagram(true, "Fremantle", "9am", 2,
+// destinations, times);
+// System.out.println(test);
+
+// station.readDatagramIn(test);
