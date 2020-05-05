@@ -8,6 +8,11 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.Scanner;
+import java.time.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+import java.time.format.DateTimeFormatter;
 
 public class Station {
 
@@ -16,9 +21,9 @@ public class Station {
     boolean isOutgoing;
     String originDepartureTime;
     int numberStationsStoppedAt;
-    ArrayList<String> path = new ArrayList<String>(); // The names of the nodes taken thus far to get to where we are
-    ArrayList<String> departureTimes = new ArrayList<String>(); // The depature times to each node on the journey
-    ArrayList<String> arrivalTimes = new ArrayList<String>(); // The depature times to each node on the journey
+    ArrayList<String> path = new ArrayList<String>();
+    ArrayList<String> departureTimes = new ArrayList<String>();
+    ArrayList<String> arrivalTimes = new ArrayList<String>();
 
     // Station Variables
     String currentStation;
@@ -27,6 +32,9 @@ public class Station {
     ArrayList<String> destinations = new ArrayList<String>();
     int receivingDatagram;
     int[] otherStationDatagrams;
+
+    // Other Variables
+    String datagramClientMessage;
 
     // ###############################################################################
     /**
@@ -44,7 +52,7 @@ public class Station {
 
     // ###############################################################################
     /**
-     * y A method to read the timetable data in froma text file and store it in an
+     * A method to read the timetable data in froma text file and store it in an
      * ArrayList
      */
     public void readTimetableIn() throws FileNotFoundException {
@@ -90,7 +98,9 @@ public class Station {
      */
     public boolean isFinalStation() {
         boolean result = false;
-        if (currentStation == requiredDestination) {
+        String c = currentStation.trim();
+        String r = currentStation.trim();
+        if (c.equals(r)) {
             result = true;
         }
         return result;
@@ -114,6 +124,22 @@ public class Station {
     }
 
     // ###############################################################################
+    /**
+     * A method to add the current station to the datagram before sending it onto
+     * the next node
+     * 
+     * @param path
+     * @param departureTimes
+     * @param arrivalTimes
+     */
+    public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
+            ArrayList<String> arrivalTimes) {
+        // departureTimes.add("")
+        path.add(currentStation);
+        departureTimes.add("TEST");
+        arrivalTimes.add("TEST");
+    }
+
     /***
      * Constructs a datagram to send based on the protcol created. The stops and
      * arrivalTime ArrayLists are indexed the same.
@@ -185,13 +211,14 @@ public class Station {
     }
 
     /***
-     * A method to send and receive datagram to other station servers
+     * A method to establish the datagram client.
      * 
-     * @param message
-     * @param port
+     * @param message the GET request sent by the client to the server requesting
+     *                journey details.
+     * @param port    to communicate with the server on.
      * @throws SocketException
      */
-    public void datagrams(String message, int port) throws SocketException {
+    public void datagramClient(String message, int port) throws SocketException {
         DatagramSocket skt;
         try {
             // Sending the Datagram
@@ -207,12 +234,39 @@ public class Station {
             skt.receive(reply);
             String result = new String(reply.getData());
             // System.out.println(new String(reply.getData()));
-            System.out.println(result);
+            // System.out.println(result);
+            datagramClientMessage = result;
             skt.close();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * A method to calculate the total journey time (in minutes) given departure and
+     * arrival times
+     * 
+     * @param departureTime
+     * @param arrivalTime
+     * @return
+     */
+    public int calculateJourneyTime(ArrayList<String> departureTime, ArrayList<String> arrivalTime) {
+        /*
+         * int[] durations = new int[departureTime.size()]; for (int i = 0; i <
+         * departureTime.size(); i++) {
+         * 
+         * Duration diff = Duration.between( (LocalDateTime.parse(arrivalTime.get(i),
+         * DateTimeFormatter.ofPattern("hh:mm", Locale.US))
+         * .atZone(ZoneId.of("Australia/Perth")).toInstant()),
+         * (LocalDateTime.parse(departureTime.get(i),
+         * DateTimeFormatter.ofPattern("hh:mm", Locale.US))
+         * .atZone(ZoneId.of("Australia/Perth")).toInstant()));
+         * 
+         * durations[i] = diff.toMinutesPart(); } int sum = 0; for (int i = 0; i <
+         * durations.length; i++) { sum += durations[i]; }
+         */
+        return 0;
     }
 
     // ###############################################################################
@@ -226,15 +280,19 @@ public class Station {
         ServerSocket serverSocket = new ServerSocket(webPort);
         while (true) {
             try {
+                // #############################################################################
+                // ESTABLISH A CONNECTION WITH THE WEB PAGE
+
                 Socket socket = serverSocket.accept();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                // read request
+
                 String line;
                 line = in.readLine();
                 StringBuilder raw = new StringBuilder();
                 raw.append("" + line);
                 boolean isPost = line.startsWith("POST");
+                boolean isGet = line.startsWith("GET");
                 int contentLength = 0;
                 while (!(line = in.readLine()).equals("")) {
                     raw.append('\n' + line);
@@ -246,6 +304,7 @@ public class Station {
                     }
                 }
                 StringBuilder body = new StringBuilder();
+
                 if (isPost) {
                     int c = 0;
                     for (int i = 0; i < contentLength; i++) {
@@ -255,13 +314,6 @@ public class Station {
                     }
                 }
                 raw.append(body.toString());
-                separateUserInputs(body.toString());
-
-                // Flood the network with datagram requests
-                /*
-                 * for (int i = 0; i < datagramPorts.length; i++) {
-                 * datagrams(requiredDestination, datagramPorts[i]); }
-                 */
 
                 // publishProgress(raw.toString());
                 // send response
@@ -269,11 +321,72 @@ public class Station {
                 out.write("Content-Type: text/html\r\n");
                 out.write("\r\n");
                 out.write(new Date().toString());
+
+                // Sending out a datagram to determine the journey for first time
                 if (isPost) {
-                    out.write("<br><u>" + body.toString() + "</u>");
+                    reset();
+                    separateUserInputs(body.toString());
+                    isOutgoing = true;
+
+                    // ######################
+                    // need a method to find the routes to travel to a given destination
+                    originDepartureTime = destinations.get(0);
+                    // ######################
+
+                    String datagramToSendToNodes = constructDatagram(isOutgoing, requiredDestination,
+                            originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+
+                    for (int i = 0; i < datagramPorts.length; i++) {
+                        datagramClient(datagramToSendToNodes, datagramPorts[0]);
+                    }
+                    // System.out.println(datagramClientMessage);
+                    // out.write("<br><u>" + body.toString() + "</u>");
+                    out.write("<br><u>" + datagramClientMessage + "</u>");
+                } else if (isGet) { // is this correct ?? is it actually a get request
+                    // #############################################################################
+                    // RUN THE RECEIVING SERVER
+                    DatagramSocket skt = null;
+                    skt = new DatagramSocket(receivingDatagram);
+                    byte[] buffer = new byte[1000];
+
+                    DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                    skt.receive(request);
+
+                    readDatagramIn(new String(request.getData()));
+                    String message = "";
+
+                    if (isFinalStation() && isOutgoing) { // State 1 - Reached required destination, now need to travel
+                                                          // back
+                        // to start node
+                        isOutgoing = false;
+                        numberStationsStoppedAt++;
+                        addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                    } else if (!isFinalStation() && isOutgoing) { // State 2 - Has not reached required destination and
+                                                                  // need
+                        // to continue travelling to it
+                        numberStationsStoppedAt++;
+                        addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                    } else if (!isFinalStation() && !isOutgoing) { // State 3 - Is on the way back to the original node
+                                                                   // but
+                        // has not returned
+                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                    } else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to the original node and
+                        // needs to transmit the route to the HTML page.
+                        // SEND HTML back
+                        out.write("<br><u>" + datagramClientMessage + "</u>");
+                    }
+
+                    byte[] sendMsg = (message).getBytes();
+                    DatagramPacket reply = new DatagramPacket(sendMsg, sendMsg.length, request.getAddress(),
+                            request.getPort());
+                    skt.send(reply);
                 } else {
                     out.write("<form method='POST'>");
-                    out.write("<input name='origin' type='text'/>");
                     out.write("<input name='destination' type='text'/>");
                     out.write("<input type='submit'/>");
                     out.write("</form>");
@@ -309,6 +422,22 @@ public class Station {
         try {
             Station station = new Station(origin, stationDatagrams, otherStationDatagrams);
             station.readTimetableIn();
+
+            // ArrayList<String> destinations = new ArrayList<String>();
+            // ArrayList<String> departureTimes = new ArrayList<String>();
+            // ArrayList<String> arrivalTimes = new ArrayList<String>();
+            // destinations.add("Subiaco");
+            // destinations.add("Thornlie");
+            // departureTimes.add("09:00");
+            // departureTimes.add("09:45");
+            // arrivalTimes.add("09:10");
+            // arrivalTimes.add("10:00");
+
+            // String test = station.constructDatagram(true, "Fremantle", "08:45", 2,
+            // destinations, departureTimes,
+            // arrivalTimes);
+            // System.out.println(webPort);
+
             station.run(webPort, otherStationDatagrams);
         } catch (IOException e) {
             e.printStackTrace();
