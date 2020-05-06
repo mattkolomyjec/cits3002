@@ -8,11 +8,26 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.Scanner;
+
+import java.util.*;
+import java.nio.*;
 import java.time.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.time.format.DateTimeFormatter;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.stream.IntStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 public class Station {
 
@@ -35,6 +50,8 @@ public class Station {
 
     // Other Variables
     String datagramClientMessage;
+    public static final String httpHeader = "HTTP/1.1 200 OK\r\n";
+    public static final String contentType = "Content-Type: text/html\r\n";
 
     // ###############################################################################
     /**
@@ -52,7 +69,7 @@ public class Station {
 
     // ###############################################################################
     /**
-     * A method to read the timetable data in froma text file and store it in an
+     * A method to read the timetable data in from a text file and store it in an
      * ArrayList
      */
     public void readTimetableIn() throws FileNotFoundException {
@@ -99,7 +116,7 @@ public class Station {
     public boolean isFinalStation() {
         boolean result = false;
         String c = currentStation.trim();
-        String r = currentStation.trim();
+        String r = requiredDestination.trim();
         if (c.equals(r)) {
             result = true;
         }
@@ -134,7 +151,6 @@ public class Station {
      */
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes) {
-        // departureTimes.add("")
         path.add(currentStation);
         departureTimes.add("TEST");
         arrivalTimes.add("TEST");
@@ -210,39 +226,6 @@ public class Station {
         }
     }
 
-    /***
-     * A method to establish the datagram client.
-     * 
-     * @param message the GET request sent by the client to the server requesting
-     *                journey details.
-     * @param port    to communicate with the server on.
-     * @throws SocketException
-     */
-    public void datagramClient(String message, int port) throws SocketException {
-        DatagramSocket skt;
-        try {
-            // Sending the Datagram
-            skt = new DatagramSocket();
-            byte[] b = message.getBytes();
-            InetAddress host = InetAddress.getByName("localhost");
-            DatagramPacket request = new DatagramPacket(b, b.length, host, port);
-            skt.send(request);
-
-            // Receiveing the Datagram
-            byte[] buffer = new byte[1000];
-            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
-            skt.receive(reply);
-            String result = new String(reply.getData());
-            // System.out.println(new String(reply.getData()));
-            // System.out.println(result);
-            datagramClientMessage = result;
-            skt.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
      * A method to calculate the total journey time (in minutes) given departure and
      * arrival times
@@ -269,6 +252,100 @@ public class Station {
         return 0;
     }
 
+    /**
+     * A method to establish the datagram server.
+     * 
+     * @param message the reply to be sent to the client
+     * @param port    that communication with the client occurs on
+     * @throws SocketException
+     */
+    public void datagramServer(int port) throws IOException {
+        DatagramSocket skt = null;
+        ServerSocket serverSocket = new ServerSocket(port);
+        Socket socket = serverSocket.accept();
+        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        try {
+            skt = new DatagramSocket(port);
+            byte[] buffer = new byte[1000];
+
+            while (true) {
+                DatagramPacket request = new DatagramPacket(buffer, buffer.length);
+                skt.receive(request);
+
+                readDatagramIn(new String(request.getData()));
+                String message = "";
+
+                if (isFinalStation() && isOutgoing) { // State 1 - Reached required destination, now need to travel back
+                                                      // to start node
+                    isOutgoing = false;
+                    numberStationsStoppedAt++;
+                    addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+                    message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                            numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                } else if (!isFinalStation() && isOutgoing) { // State 2 - Has not reached required destination and need
+                                                              // to continue travelling to it
+                    numberStationsStoppedAt++;
+                    addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+                    message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                            numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                } else if (!isFinalStation() && !isOutgoing) { // State 3 - Is on the way back to the original node but
+                                                               // has not returned
+                    message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                            numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+                } else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to the original node and
+                                                              // needs to transmit the route to the HTML page.
+                    readDatagramIn(datagramClientMessage);
+                    out.write("<br> <strong> Destination:</strong> " + requiredDestination);
+                    out.write(
+                            "<div> <br> <strong> Route </strong> (Departing Stop | Departure Time | Arrival Time) </div>\r\n");
+                    for (int i = 0; i < path.size(); i++) {
+                        out.write("<br>" + path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i));
+                    }
+                }
+
+                byte[] sendMsg = (message).getBytes();
+                DatagramPacket reply = new DatagramPacket(sendMsg, sendMsg.length, request.getAddress(),
+                        request.getPort());
+                skt.send(reply);
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /***
+     * A method to establish the datagram client.
+     * 
+     * @param message the GET request sent by the client to the server requesting
+     *                journey details.
+     * @param port    to communicate with the server on.
+     * @throws SocketException
+     */
+    public void datagramClient(String message, int port) throws SocketException {
+        DatagramSocket skt;
+        try {
+            // Sending the Datagram
+            skt = new DatagramSocket();
+            byte[] b = message.getBytes();
+            InetAddress host = InetAddress.getByName("localhost");
+            DatagramPacket request = new DatagramPacket(b, b.length, host, port);
+            skt.send(request);
+
+            // Receiveing the Datagram
+            byte[] buffer = new byte[1000];
+            DatagramPacket reply = new DatagramPacket(buffer, buffer.length);
+            skt.receive(reply);
+            String result = new String(reply.getData());
+            datagramClientMessage = result;
+            skt.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     // ###############################################################################
     /**
      * A method to run the core socket server.
@@ -280,9 +357,6 @@ public class Station {
         ServerSocket serverSocket = new ServerSocket(webPort);
         while (true) {
             try {
-                // #############################################################################
-                // ESTABLISH A CONNECTION WITH THE WEB PAGE
-
                 Socket socket = serverSocket.accept();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -316,11 +390,10 @@ public class Station {
                 raw.append(body.toString());
 
                 // publishProgress(raw.toString());
-                // send response
-                out.write("HTTP/1.1 200 OK\r\n");
-                out.write("Content-Type: text/html\r\n");
+                out.write(httpHeader);
+                out.write(contentType);
                 out.write("\r\n");
-                out.write(new Date().toString());
+                out.write(new Date().toString() + "<br>");
 
                 // Sending out a datagram to determine the journey for first time
                 if (isPost) {
@@ -339,52 +412,19 @@ public class Station {
                     for (int i = 0; i < datagramPorts.length; i++) {
                         datagramClient(datagramToSendToNodes, datagramPorts[0]);
                     }
-                    // System.out.println(datagramClientMessage);
+
                     // out.write("<br><u>" + body.toString() + "</u>");
-                    out.write("<br><u>" + datagramClientMessage + "</u>");
-                } else if (isGet) { // is this correct ?? is it actually a get request
-                    // #############################################################################
-                    // RUN THE RECEIVING SERVER
-                    DatagramSocket skt = null;
-                    skt = new DatagramSocket(receivingDatagram);
-                    byte[] buffer = new byte[1000];
 
-                    DatagramPacket request = new DatagramPacket(buffer, buffer.length);
-                    skt.receive(request);
-
-                    readDatagramIn(new String(request.getData()));
-                    String message = "";
-
-                    if (isFinalStation() && isOutgoing) { // State 1 - Reached required destination, now need to travel
-                                                          // back
-                        // to start node
-                        isOutgoing = false;
-                        numberStationsStoppedAt++;
-                        addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
-                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
-                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
-                    } else if (!isFinalStation() && isOutgoing) { // State 2 - Has not reached required destination and
-                                                                  // need
-                        // to continue travelling to it
-                        numberStationsStoppedAt++;
-                        addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
-                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
-                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
-                    } else if (!isFinalStation() && !isOutgoing) { // State 3 - Is on the way back to the original node
-                                                                   // but
-                        // has not returned
-                        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
-                                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
-                    } else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to the original node and
-                        // needs to transmit the route to the HTML page.
-                        // SEND HTML back
-                        out.write("<br><u>" + datagramClientMessage + "</u>");
+                    // Below stuff will sit in Datagram server and send on the final condition in
+                    // the if/else statement
+                    readDatagramIn(datagramClientMessage);
+                    out.write("<br> <strong> Destination:</strong> " + requiredDestination);
+                    out.write(
+                            "<div> <br> <strong> Route </strong> (Departing Stop | Departure Time | Arrival Time) </div>\r\n");
+                    for (int i = 0; i < path.size(); i++) {
+                        out.write("<br>" + path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i));
                     }
 
-                    byte[] sendMsg = (message).getBytes();
-                    DatagramPacket reply = new DatagramPacket(sendMsg, sendMsg.length, request.getAddress(),
-                            request.getPort());
-                    skt.send(reply);
                 } else {
                     out.write("<form method='POST'>");
                     out.write("<input name='destination' type='text'/>");
@@ -423,20 +463,7 @@ public class Station {
             Station station = new Station(origin, stationDatagrams, otherStationDatagrams);
             station.readTimetableIn();
 
-            // ArrayList<String> destinations = new ArrayList<String>();
-            // ArrayList<String> departureTimes = new ArrayList<String>();
-            // ArrayList<String> arrivalTimes = new ArrayList<String>();
-            // destinations.add("Subiaco");
-            // destinations.add("Thornlie");
-            // departureTimes.add("09:00");
-            // departureTimes.add("09:45");
-            // arrivalTimes.add("09:10");
-            // arrivalTimes.add("10:00");
-
-            // String test = station.constructDatagram(true, "Fremantle", "08:45", 2,
-            // destinations, departureTimes,
-            // arrivalTimes);
-            // System.out.println(webPort);
+            // ************************************
 
             station.run(webPort, otherStationDatagrams);
         } catch (IOException e) {
@@ -471,3 +498,48 @@ public class Station {
 // station.readDatagramIn(test);
 
 // System.out.println(test);
+
+// ArrayList<String> destinations = new ArrayList<String>();
+// ArrayList<String> departureTimes = new ArrayList<String>();
+// ArrayList<String> arrivalTimes = new ArrayList<String>();
+// destinations.add("Subiaco");
+// destinations.add("Thornlie");
+// departureTimes.add("09:00");
+// departureTimes.add("09:45");
+// arrivalTimes.add("09:10");
+// arrivalTimes.add("10:00");
+
+// String test = station.constructDatagram(true, "Fremantle", "08:45", 2,
+// destinations, departureTimes,
+// arrivalTimes);
+// System.out.println(webPort);
+
+/*
+ * Selector selector = Selector.open();
+ * System.out.println("Selector is open for making connection: " +
+ * selector.isOpen());
+ * 
+ * channel.configureBlocking(false); SelectionKey key =
+ * channel.register(selector, SelectionKey.OP_READ);
+ * 
+ * int connectAcceptRead = SelectionKey.OP_READ | SelectionKey.OP_ACCEPT |
+ * SelectionKey.OP_CONNECT; int connectAcceptWrite = SelectionKey.OP_ACCEPT |
+ * SelectionKey.OP_CONNECT | SelectionKey.OP_WRITE;
+ * 
+ * 
+ * 
+ * ServerSocketChannel serverSocket = ServerSocketChannel.open();
+ * InetSocketAddress hostAddress = new InetSocketAddress("localhost", webPort);
+ * 
+ * serverSocket.bind(hostAddress);
+ * 
+ * Set<SelectionKey> selectedKeys = selector.selectedKeys();
+ * 
+ * Iterator<SelectionKey> keyIterator = selectedKeys.iterator(); while
+ * (keyIterator.hasNext()) { SelectionKey key = keyIterator.next(); if
+ * (key.isConnectable()) { // The connection was established with a remote
+ * server. } else if (key.isAcceptable()) { // The connection was accepted by a
+ * ServerSocketChannel. } else if (key.isWritable()) { // The channel is ready
+ * for writing } else if (key.isReadable()) { // The channel is ready for
+ * reading } keyIterator.remove(); }
+ */
