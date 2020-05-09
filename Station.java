@@ -95,6 +95,17 @@ public class Station {
         return result;
     }
 
+    public void separateUserInputs(String body) {
+        String[] temp = body.split("(?!^)");
+        int endIndex = 0;
+        for (int i = 0; i < temp.length; i++) {
+            if (temp[i].contains("=")) {
+                endIndex = i + 1;
+            }
+        }
+        requiredDestination = body.substring(endIndex);
+    }
+
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes) {
         path.add(currentStation);
@@ -228,13 +239,14 @@ public class Station {
                     continue;
                 }
                 if (key.isAcceptable()) { // Accept client connections
-                    this.accept(key);
+                    if (serverChannel.keyFor(selector) == key) {
+
+                        this.accept(key);
+                    }
                 } else if (key.isReadable()) { // Read from client
                     if (channel.keyFor(selector) == key) {
-
                         this.readUDP(key);
-                    } else if (serverChannel.keyFor(selector) == key) {
-
+                    } else {
                         this.readTCP(key);
                     }
                 } else if (key.isWritable()) {
@@ -249,9 +261,6 @@ public class Station {
         }
 
     }
-    // System.out.println(serverChannel.keyFor(selector) == key);
-    // System.out.println(channel.keyFor(selector) == key);
-    // (key.channel().equals(serverChannel))
 
     // accept client connection
     private void accept(SelectionKey key) throws IOException {
@@ -267,24 +276,19 @@ public class Station {
          * operations, here we have used read operation)
          */
 
-        // POST HTML FORM TO WEBPORT
-        if (socket.getLocalPort() == webPort) {
+        channel.register(this.selector, SelectionKey.OP_READ);
 
-            channel.register(this.selector, SelectionKey.OP_READ);
-            System.out.println("Port = " + socket.getLocalPort());
-            System.out.println("Client... started");
-            ByteBuffer buffer = ByteBuffer.allocate(1024);
-            String date = new Date().toString() + "<br>";
-            String message = httpHeader + contentType + "\r\n" + date + "<form method='POST'>"
-                    + "<input name='destination' type='text'/>" + "<input type='submit'/>" + "</form>";
-            buffer.put(message.getBytes());
-            buffer.flip();
-            channel.write(buffer);
-            System.out.println(message);
-            buffer.clear();
-            channel.register(this.selector, SelectionKey.OP_WRITE);
+        System.out.println("Client... started");
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        String date = new Date().toString() + "<br>";
+        String message = httpHeader + contentType + "\r\n" + date + "<form method='POST'>"
+                + "<input name='destination' type='text'/>" + "<input type='submit'/>" + "</form>";
+        buffer.put(message.getBytes());
+        buffer.flip();
+        channel.write(buffer);
+        System.out.println(message);
+        buffer.clear();
 
-        }
     }
 
     // read from the socket channel
@@ -306,8 +310,6 @@ public class Station {
 
         byte[] data = new byte[numRead];
         System.arraycopy(buffer.array(), 0, data, 0, numRead);
-        System.out.println(data);
-        // if is localhost do this
         System.out.println("Got: " + new String(data));
 
         // if (isFinalStation() && !isOutgoing)
