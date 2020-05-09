@@ -197,7 +197,7 @@ public class Station {
 
         // bind server socket channel to port
         serverChannel.socket().bind(listenAddress);
-        serverChannel.register(selector, SelectionKey.OP_ACCEPT); // ONLY REGISTERED FOR OP_ACCEPT
+        serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
         // Register Datagram Receipt Port
         DatagramChannel channel = DatagramChannel.open();
@@ -213,6 +213,7 @@ public class Station {
             if (readyCount == 0) {
                 continue;
             }
+            // System.out.println("keyfor : " + serverChannel.keyFor(selector));
 
             // process selected keys...
             Set<SelectionKey> readyKeys = selector.selectedKeys();
@@ -228,24 +229,18 @@ public class Station {
                 }
                 if (key.isAcceptable()) { // Accept client connections
                     this.accept(key);
-
                 } else if (key.isReadable()) { // Read from client
+                    if (channel.keyFor(selector) == key) {
 
-                    if (key.channel().equals(channel)) { // If the current channel is the datagram channel, read it in
                         this.readUDP(key);
-                    } else if (key.channel().equals(serverChannel)) { // if the current channel is the TCP channel, read
-                                                                      // it in
-                        // PROBLEM IS THAT THIS IS NOT BEING REACHED
-                        System.out.println(key.channel().equals(serverChannel));
+                    } else if (serverChannel.keyFor(selector) == key) {
+
                         this.readTCP(key);
                     }
                 } else if (key.isWritable()) {
-                    System.out.println(key.isWritable());
-                    // write data to client...
-                    if (key.channel().equals(channel)) { // If the current channel is the datagram channel, read it in
+                    if (channel.keyFor(selector) == key) {
                         // this.writeUDP(message, port);
-                    } else if (key.channel().equals(serverChannel)) { // if the current channel is the TCP channel, read
-                                                                      // it in
+                    } else if (serverChannel.keyFor(selector) == key) {
                         this.writeTCP(key);
                     }
 
@@ -254,6 +249,9 @@ public class Station {
         }
 
     }
+    // System.out.println(serverChannel.keyFor(selector) == key);
+    // System.out.println(channel.keyFor(selector) == key);
+    // (key.channel().equals(serverChannel))
 
     // accept client connection
     private void accept(SelectionKey key) throws IOException {
@@ -284,6 +282,7 @@ public class Station {
             channel.write(buffer);
             System.out.println(message);
             buffer.clear();
+            channel.register(this.selector, SelectionKey.OP_WRITE);
 
         }
     }
@@ -327,7 +326,6 @@ public class Station {
         System.out.println("Client at " + remoteAdd + "  sent: " + msg);
         // channel.send(buffer, remoteAdd);
         readDatagramIn(msg);
-
     }
 
     public void writeTCP(SelectionKey key) throws IOException {
@@ -338,10 +336,9 @@ public class Station {
                 + requiredDestination
                 + "<div> <br> <strong> Route </strong> (Departing Stop | Departure Time | Arrival Time) </div>\r\n";
 
-        // for (int i = 0; i < path.size(); i++) {
-        // message += "<br>" + path.get(i) + " " + departureTimes.get(i) + " " +
-        // arrivalTimes.get(i);
-        // }
+        for (int i = 0; i < path.size(); i++) {
+            message += "<br>" + path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i);
+        }
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
@@ -372,22 +369,6 @@ public class Station {
         }
     }
 
-    public void writeMessage(String[] messages) throws IOException {
-
-        for (int i = 0; i < messages.length; i++) {
-            InetSocketAddress hostAddress = new InetSocketAddress("localhost", 2041);
-            SocketChannel client = SocketChannel.open(hostAddress);
-            System.out.println("Client... started");
-            ByteBuffer buffer = ByteBuffer.allocate(74);
-            buffer.put(messages[i].getBytes());
-            buffer.flip();
-            client.write(buffer);
-            System.out.println(messages[i]);
-            buffer.clear();
-        }
-
-    }
-
     public static void main(String args[]) {
         if (args.length < 4) {
             throw new IllegalArgumentException(
@@ -405,6 +386,19 @@ public class Station {
         }
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
+            ArrayList<String> destinations = new ArrayList<String>();
+            ArrayList<String> departureTimes = new ArrayList<String>();
+            ArrayList<String> arrivalTimes = new ArrayList<String>();
+            destinations.add("Subiaco");
+            destinations.add("Thornlie");
+            departureTimes.add("09:00");
+            departureTimes.add("09:45");
+            arrivalTimes.add("09:10");
+            arrivalTimes.add("10:00");
+
+            String test = station.constructDatagram(true, "Fremantle", "08:45", 2, destinations, departureTimes,
+                    arrivalTimes);
+
             station.readTimetableIn();
             station.run(webPort, stationDatagrams, otherStationDatagrams);
 
@@ -412,4 +406,21 @@ public class Station {
             e.printStackTrace();
         }
     }
+
 }
+
+// public void writeMessage(String[] messages) throws IOException {
+
+// for (int i = 0; i < messages.length; i++) {
+// InetSocketAddress hostAddress = new InetSocketAddress("localhost", 2041);
+// SocketChannel client = SocketChannel.open(hostAddress);
+// System.out.println("Client... started");
+// ByteBuffer buffer = ByteBuffer.allocate(74);
+// buffer.put(messages[i].getBytes());
+// buffer.flip();
+// client.write(buffer);
+// System.out.println(messages[i]);
+// buffer.clear();
+// }
+
+// }
