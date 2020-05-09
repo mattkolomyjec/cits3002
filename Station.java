@@ -164,10 +164,16 @@ public class Station {
         }
     }
 
+    boolean arrivedBack = false;
+
     public void datagramChecks() throws IOException {
+        System.out.println("REACHED 2");
+        System.out.println(isFinalStation());
+        System.out.println(isOutgoing);
         String message;
         if (isFinalStation() && isOutgoing) { // State 1 - Reached required destination, now need to travel back
             // to start node
+            System.out.println("REACHED 3");
             isOutgoing = false;
             numberStationsStoppedAt++;
             addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
@@ -194,7 +200,7 @@ public class Station {
             }
         } else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to the original node and
             // needs to transmit the route to the HTML page.
-            readDatagramIn(datagramClientMessage);
+            // readDatagramIn(datagramClientMessage);
             /// !! !!!!!!!!
         }
     }
@@ -224,7 +230,6 @@ public class Station {
             if (readyCount == 0) {
                 continue;
             }
-            // System.out.println("keyfor : " + serverChannel.keyFor(selector));
 
             // process selected keys...
             Set<SelectionKey> readyKeys = selector.selectedKeys();
@@ -238,6 +243,7 @@ public class Station {
                 if (!key.isValid()) {
                     continue;
                 }
+
                 if (key.isAcceptable()) { // Accept client connections
                     if (serverChannel.keyFor(selector) == key) {
 
@@ -252,7 +258,8 @@ public class Station {
                 } else if (key.isWritable()) {
                     if (channel.keyFor(selector) == key) {
                         // this.writeUDP(message, port);
-                    } else if (serverChannel.keyFor(selector) == key) {
+                    } else if ((serverChannel.keyFor(selector) == key) && isFinalStation() && !isOutgoing) {
+                        System.out.println("REACHED");
                         this.writeTCP(key);
                     }
 
@@ -270,11 +277,6 @@ public class Station {
         Socket socket = channel.socket();
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
         System.out.println("Connected to: " + remoteAddr);
-
-        /*
-         * Register channel with selector for further IO (record it for read/write
-         * operations, here we have used read operation)
-         */
 
         channel.register(this.selector, SelectionKey.OP_READ);
 
@@ -311,7 +313,10 @@ public class Station {
         byte[] data = new byte[numRead];
         System.arraycopy(buffer.array(), 0, data, 0, numRead);
         System.out.println("Got: " + new String(data));
+        String result = new String(data);
+        separateUserInputs(result);
 
+        channel.register(this.selector, SelectionKey.OP_WRITE);
         // if (isFinalStation() && !isOutgoing)
 
     }
@@ -328,6 +333,11 @@ public class Station {
         System.out.println("Client at " + remoteAdd + "  sent: " + msg);
         // channel.send(buffer, remoteAdd);
         readDatagramIn(msg);
+        // requiredDestination = "Warwick";
+        // currentStation = "Warwick";
+        // isOutgoing = true;
+
+        datagramChecks();
     }
 
     public void writeTCP(SelectionKey key) throws IOException {
@@ -356,20 +366,20 @@ public class Station {
             byte[] b = message.getBytes();
             InetAddress host = InetAddress.getByName("localhost");
             DatagramPacket request = new DatagramPacket(b, b.length, host, port);
+            System.out.println("REACHED 4");
             skt.send(request);
-
-            // Receiveing the Datagram
-            /*
-             * byte[] buffer = new byte[1000]; DatagramPacket reply = new
-             * DatagramPacket(buffer, buffer.length); skt.receive(reply); String result =
-             * new String(reply.getData()); datagramClientMessage = result; skt.close();
-             */
             skt.close();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    // Receiveing the Datagram
+    /*
+     * byte[] buffer = new byte[1000]; DatagramPacket reply = new
+     * DatagramPacket(buffer, buffer.length); skt.receive(reply); String result =
+     * new String(reply.getData()); datagramClientMessage = result; skt.close();
+     */
 
     public static void main(String args[]) {
         if (args.length < 4) {
