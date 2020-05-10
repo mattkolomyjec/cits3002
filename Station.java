@@ -95,15 +95,21 @@ public class Station {
         return result;
     }
 
+    // GET /?destination=Warwick-Stn HTTP/1.1
     public void separateUserInputs(String body) {
+        System.out.println("body = " + body);
         String[] temp = body.split("(?!^)");
-        int endIndex = 0;
+        int startIndex = 0;
+
         for (int i = 0; i < temp.length; i++) {
+
             if (temp[i].contains("=")) {
-                endIndex = i + 1;
+                startIndex = i + 1;
             }
+
         }
-        requiredDestination = body.substring(endIndex);
+        requiredDestination = body.substring(startIndex);
+        System.out.println("required = " + requiredDestination);
     }
 
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
@@ -283,7 +289,7 @@ public class Station {
         System.out.println("Client... started");
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
-        String message = httpHeader + contentType + "\r\n" + date + "<form method='POST'>"
+        String message = httpHeader + contentType + "\r\n" + date + "<form method='GET'>"
                 + "<input name='destination' type='text'/>" + "<input type='submit'/>" + "</form>";
         buffer.put(message.getBytes());
         buffer.flip();
@@ -315,7 +321,7 @@ public class Station {
         System.out.println("Got: " + new String(data));
         String result = new String(data);
         separateUserInputs(result);
-
+        System.out.println("Result = " + result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
         // if (isFinalStation() && !isOutgoing)
 
@@ -340,6 +346,7 @@ public class Station {
         datagramChecks();
     }
 
+    // POST request?
     public void writeTCP(SelectionKey key) throws IOException {
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
