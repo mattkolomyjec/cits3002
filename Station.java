@@ -97,19 +97,22 @@ public class Station {
 
     // GET /?destination=Warwick-Stn HTTP/1.1
     public void separateUserInputs(String body) {
-        System.out.println("body = " + body);
         String[] temp = body.split("(?!^)");
         int startIndex = 0;
+        int endIndex = 0;
+        for (int i = 1; i < temp.length; i++) {
 
-        for (int i = 0; i < temp.length; i++) {
-
-            if (temp[i].contains("=")) {
+            if (temp[i].contains("=") && temp[i - 1].contains("n")) {
                 startIndex = i + 1;
+            }
+            if (temp[i].contains("H") && temp[i - 1].contains(" ")) {
+                endIndex = i - 1;
             }
 
         }
-        requiredDestination = body.substring(startIndex);
-        System.out.println("required = " + requiredDestination);
+
+        requiredDestination = body.substring(startIndex, endIndex);
+        requiredDestination.trim();
     }
 
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
