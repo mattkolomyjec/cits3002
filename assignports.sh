@@ -9,7 +9,7 @@ fi
 
 # ---------------------------------------
 
-MYSERVER="./station"
+MYSERVER="java Station"
 port="4000"
 
 PATH="/bin:/usr/bin"

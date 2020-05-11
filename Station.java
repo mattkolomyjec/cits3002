@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.io.*;
@@ -9,38 +8,35 @@ import java.net.InetAddress;
 import java.util.Date;
 import java.util.Scanner;
 import java.util.*;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.net.InetSocketAddress;
+import java.util.Iterator;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
+/*
+import java.net.ServerSocket;
+import java.util.Arrays;
+import java.util.stream.IntStream;
+import java.nio.channels.Channel;
 import java.nio.*;
 import java.time.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.time.format.DateTimeFormatter;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.stream.IntStream;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.Buffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.channels.FileChannel;
+*/
 
 public class Station {
-
-    // Other Variables
-    private Selector selector;
-    public static final String httpHeader = "HTTP/1.1 200 OK\r\n";
-    public static final String contentType = "Content-Type: text/html\r\n";
-    String datagramClientMessage;
 
     // Message Variables
     String requiredDestination; // The intended destination of the user. WILL CAPS LOCK AFFECT THIS?
@@ -59,6 +55,12 @@ public class Station {
     String latitude;
     String longitude;
     ArrayList<String> destinations = new ArrayList<String>();
+
+    // Other Variables
+    private Selector selector;
+    public static final String httpHeader = "HTTP/1.1 200 OK\r\n";
+    public static final String contentType = "Content-Type: text/html\r\n";
+    String datagramClientMessage;
 
     public Station(String currentStation, int webPort, int receivingDatagram, int[] otherStationDatagrams) {
         this.webPort = webPort;
@@ -208,11 +210,6 @@ public class Station {
             }
         }
     }
-    /*
-     * else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to
-     * the original node and // needs to transmit the route to the HTML page. //
-     * readDatagramIn(datagramClientMessage); /// !! !!!!!!!! }
-     */
 
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
         InetSocketAddress listenAddress = new InetSocketAddress(webPort);
@@ -322,7 +319,6 @@ public class Station {
         separateUserInputs(result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
         // if (isFinalStation() && !isOutgoing)
-
     }
 
     public void readUDP(SelectionKey key) throws IOException {
@@ -340,7 +336,6 @@ public class Station {
         // requiredDestination = "Warwick";
         // currentStation = "Warwick";
         // isOutgoing = true;
-
         datagramChecks();
     }
 
