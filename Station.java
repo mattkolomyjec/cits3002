@@ -97,7 +97,9 @@ public class Station {
         return result;
     }
 
+    // GET /?to=Warwick-Stn HTTP/1.1
     public void separateUserInputs(String body) {
+        System.out.println("body = " + body);
         String[] temp = body.split("(?!^)");
         int startIndex = 0;
         int endIndex = 0;
@@ -105,9 +107,11 @@ public class Station {
 
             if (temp[i].contains("=") && temp[i - 1].contains("o")) {
                 startIndex = i + 1;
+                System.out.println("Start index = " + startIndex);
             }
             if (temp[i].contains("H") && temp[i - 1].contains(" ")) {
                 endIndex = i - 1;
+                System.out.println("End index = " + endIndex);
             }
 
         }
@@ -173,8 +177,6 @@ public class Station {
             arrivalIndex += 3;
         }
     }
-
-    boolean arrivedBack = false;
 
     public void datagramChecks() throws IOException {
         System.out.println("REACHED 2");
@@ -318,7 +320,13 @@ public class Station {
         String result = new String(data);
         separateUserInputs(result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
-        // if (isFinalStation() && !isOutgoing)
+
+        // Flood datagrams to all ports
+        String message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                numberStationsStoppedAt, path, departureTimes, arrivalTimes);
+        for (int i = 0; i < otherStationDatagrams.length; i++) {
+            writeUDP(message, otherStationDatagrams[i]);
+        }
     }
 
     public void readUDP(SelectionKey key) throws IOException {
@@ -336,11 +344,19 @@ public class Station {
         // requiredDestination = "Warwick";
         // currentStation = "Warwick";
         // isOutgoing = true;
-        datagramChecks();
+        if (isFinalStation() && !isOutgoing) {
+            System.out.println("FOUND 1");
+            channel.register(this.selector, SelectionKey.OP_WRITE);
+
+        } else {
+            datagramChecks();
+        }
+
     }
 
     // POST request?
     public void writeTCP(SelectionKey key) throws IOException {
+        System.out.println("FOUND 2");
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
