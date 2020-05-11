@@ -95,14 +95,13 @@ public class Station {
         return result;
     }
 
-    // GET /?destination=Warwick-Stn HTTP/1.1
     public void separateUserInputs(String body) {
         String[] temp = body.split("(?!^)");
         int startIndex = 0;
         int endIndex = 0;
         for (int i = 1; i < temp.length; i++) {
 
-            if (temp[i].contains("=") && temp[i - 1].contains("n")) {
+            if (temp[i].contains("=") && temp[i - 1].contains("o")) {
                 startIndex = i + 1;
             }
             if (temp[i].contains("H") && temp[i - 1].contains(" ")) {
@@ -207,12 +206,13 @@ public class Station {
             for (int i = 0; i < otherStationDatagrams.length; i++) {
                 writeUDP(message, otherStationDatagrams[i]);
             }
-        } else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to the original node and
-            // needs to transmit the route to the HTML page.
-            // readDatagramIn(datagramClientMessage);
-            /// !! !!!!!!!!
         }
     }
+    /*
+     * else if (isFinalStation() && !isOutgoing) { // State 4 - Has arrived back to
+     * the original node and // needs to transmit the route to the HTML page. //
+     * readDatagramIn(datagramClientMessage); /// !! !!!!!!!! }
+     */
 
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
         InetSocketAddress listenAddress = new InetSocketAddress(webPort);
@@ -265,13 +265,9 @@ public class Station {
                         this.readTCP(key);
                     }
                 } else if (key.isWritable()) {
-                    if (channel.keyFor(selector) == key) {
-                        // this.writeUDP(message, port);
-                    } else if ((serverChannel.keyFor(selector) == key) && isFinalStation() && !isOutgoing) {
-                        System.out.println("REACHED");
+                    if (isFinalStation() && !isOutgoing) {
                         this.writeTCP(key);
                     }
-
                 }
             }
         }
@@ -293,7 +289,7 @@ public class Station {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
         String message = httpHeader + contentType + "\r\n" + date + "<form method='GET'>"
-                + "<input name='destination' type='text'/>" + "<input type='submit'/>" + "</form>";
+                + "<input name='to' type='text'/>" + "<input type='submit'/>" + "</form>";
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
@@ -324,7 +320,6 @@ public class Station {
         System.out.println("Got: " + new String(data));
         String result = new String(data);
         separateUserInputs(result);
-        System.out.println("Result = " + result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
         // if (isFinalStation() && !isOutgoing)
 
