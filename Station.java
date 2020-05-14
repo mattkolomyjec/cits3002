@@ -61,7 +61,8 @@ public class Station {
     }
 
     public void readTimetableIn() throws FileNotFoundException {
-        File file = new File("google_transit/tt-Cottesloe_Stn");
+        String chosenStation = "tt-" + currentStation;
+        File file = new File("google_transit/" + chosenStation);
         Scanner sc = new Scanner(file);
 
         String temp[] = ((sc.nextLine()).split(","));
@@ -261,6 +262,8 @@ public class Station {
     }
 
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
+        readTimetableIn();
+
         InetSocketAddress listenAddress = new InetSocketAddress(webPort);
 
         this.selector = Selector.open();
@@ -475,7 +478,6 @@ public class Station {
         }
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
-            station.readTimetableIn();
             station.run(webPort, stationDatagrams, otherStationDatagrams);
 
         } catch (IOException e) {
