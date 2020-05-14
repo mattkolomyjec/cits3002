@@ -55,6 +55,7 @@ public class Station {
     }
 
     public void readTimetableIn() throws FileNotFoundException {
+
         File file = new File("routes.txt");
         Scanner sc = new Scanner(file);
 
@@ -140,6 +141,11 @@ public class Station {
 
     public void readDatagramIn(String message) {
         reset();
+        try {
+            readTimetableIn();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         String temp[] = message.split(" ");
         if (temp[0].contains("Outgoing")) {
             isOutgoing = true;
