@@ -17,25 +17,6 @@ import java.util.Iterator;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-/*
-import javax.security.auth.DestroyFailedException;
-import java.net.ServerSocket;
-import java.util.Arrays;
-import java.util.stream.IntStream;
-import java.nio.channels.Channel;
-import java.nio.*;
-import java.time.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
-import java.time.format.DateTimeFormatter;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
-import java.nio.Buffer;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.channels.FileChannel;
-*/
 
 public class Station {
 
@@ -104,26 +85,20 @@ public class Station {
 
     // GET /?to=Warwick-Stn HTTP/1.1
     public void separateUserInputs(String body) {
-        System.out.println("body = " + body);
         String[] temp = body.split("(?!^)");
         int startIndex = 0;
         int endIndex = 0;
         for (int i = 1; i < temp.length; i++) {
-
             if (temp[i].contains("=") && temp[i - 1].contains("o")) {
                 startIndex = i + 1;
-                System.out.println("Start index = " + startIndex);
             }
             if (temp[i].contains("H") && temp[i - 1].contains(" ")) {
                 endIndex = i - 1;
-                System.out.println("End index = " + endIndex);
             }
-
         }
 
         requiredDestination = body.substring(startIndex, endIndex);
         requiredDestination.trim();
-        System.out.println("separateUserInputs =" + requiredDestination);
     }
 
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
@@ -213,10 +188,6 @@ public class Station {
     }
 
     public void datagramChecks() throws IOException {
-        System.out.println("isFinalStation =" + isFinalStation());
-        System.out.println("isOutgoing" + isOutgoing);
-        System.out.println("hasReachedFinalDestination 214 =" + hasReachedFinalStation);
-
         String message;
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
@@ -261,7 +232,6 @@ public class Station {
             System.out.println("REACHED 5");
 
             int oldPort = lastNodePort;
-            System.out.println("Last port =" + oldPort);
             lastNodePort = receivingDatagram;
 
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
@@ -270,22 +240,10 @@ public class Station {
                 if (otherStationDatagrams[i] == oldPort) {
                     continue;
                 } else {
-                    System.out.println("Node sent to =" + otherStationDatagrams[i]);
                     writeUDP(message, otherStationDatagrams[i]);
                 }
             }
-        } /*
-           * else if (!isOutgoing && hasReachedFinalStation) {
-           * 
-           * System.out.println("REACHAMASSIVE"); int oldPort = lastNodePort; lastNodePort
-           * = receivingDatagram;
-           * 
-           * message = constructDatagram(isOutgoing, requiredDestination,
-           * originDepartureTime, numberStationsStoppedAt, path, departureTimes,
-           * arrivalTimes, lastNodePort, hasReachedFinalStation); for (int i = 0; i <
-           * otherStationDatagrams.length; i++) { if (otherStationDatagrams[i] == oldPort)
-           * { continue; } else { writeUDP(message, otherStationDatagrams[i]); } } }
-           */
+        }
     }
 
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
@@ -339,19 +297,21 @@ public class Station {
                         this.readTCP(key);
                     }
                 } else if (key.isWritable()) {
-                    // System.out.println("Reacharoo");
-                    // System.out.println("hasReachedFinalStation" + hasReachedFinalStation);
-                    // System.out.println("isOutgoing" + isOutgoing);
-                    // System.out.println("Writable current station =" + currentStation);
-                    // System.out.println("contains =" + currentStation.contains(homeStation));
+                    if (channel.keyFor(selector) == key) {
+                        channel.register(this.selector, SelectionKey.OP_READ);
+                        break;
+                    }
+
                     if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                         this.writeTCP(key);
+                        serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
+                        // break;
                         // break;
 
                     }
                     // channel.register(this.selector, SelectionKey.OP_READ);
-                    serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
-                    break;
+                    // serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
+                    // break;
 
                     // break;
                 }
@@ -434,10 +394,6 @@ public class Station {
         readDatagramIn(msg);
         System.out.println(msg);
 
-        System.out.println("Current Station=" + currentStation);
-        System.out.println("Home Station =" + homeStation);
-        System.out.println(currentStation.contains(homeStation));
-
         if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
             System.out.println("NiHao");
             channel.register(this.selector, SelectionKey.OP_WRITE);
@@ -454,13 +410,16 @@ public class Station {
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
-        String message = httpHeader + contentType + "\r\n" + date + "<br> <strong> Destination:</strong> "
-                + requiredDestination
+        String message = /* httpHeader + contentType + */ "\r\n" + "<br>" + date
+                + "<br> <strong> Destination:</strong> " + requiredDestination
                 + "<div> <br> <strong> Route </strong> (Departing Stop | Departure Time | Arrival Time) </div>\n";
 
         for (int i = 0; i < path.size(); i++) {
             message += "<br>" + path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i);
         }
+        message += "<br>";
+        message += "________________________________________";
+        message += "<br>";
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
