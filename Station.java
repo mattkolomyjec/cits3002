@@ -346,7 +346,7 @@ public class Station {
                     if (hasReachedFinalStation && !isOutgoing) {
                         System.out.println("REACHA");
                         this.writeTCP(key);
-                        break;
+                        // break;
                     }
                     // break;
                 }
@@ -449,6 +449,7 @@ public class Station {
         channel.write(buffer);
         System.out.println(message);
         buffer.clear();
+        channel.register(this.selector, SelectionKey.OP_READ);
     }
 
     public void writeUDP(String message, int port) throws SocketException {
