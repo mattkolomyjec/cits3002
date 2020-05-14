@@ -192,7 +192,7 @@ public class Station {
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
             // to start node
-            System.out.println("REACHED 3");
+            // System.out.println("REACHED 3");
             isOutgoing = false;
             hasReachedFinalStation = true;
             numberStationsStoppedAt++;
@@ -210,7 +210,7 @@ public class Station {
                                                                                  // destination and need
             // to continue travelling to it
             numberStationsStoppedAt++;
-            System.out.println("REACHED 4");
+            // System.out.println("REACHED 4");
 
             int oldPort = lastNodePort;
             lastNodePort = receivingDatagram;
@@ -229,7 +229,7 @@ public class Station {
         } else if (!isFinalStation() && !isOutgoing && hasReachedFinalStation) { // State 3 - Is on the way back to the
                                                                                  // original node but
             // has not returned
-            System.out.println("REACHED 5");
+            // System.out.println("REACHED 5");
 
             int oldPort = lastNodePort;
             lastNodePort = receivingDatagram;
@@ -339,7 +339,7 @@ public class Station {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
-        System.out.println(message);
+        // System.out.println(message);
         buffer.clear();
 
     }
@@ -392,10 +392,9 @@ public class Station {
         System.out.println("Client at " + remoteAdd + "  sent: " + msg);
         // channel.send(buffer, remoteAdd);
         readDatagramIn(msg);
-        System.out.println(msg);
+        // System.out.println(msg);
 
         if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
-            System.out.println("NiHao");
             channel.register(this.selector, SelectionKey.OP_WRITE);
         } else {
             datagramChecks();
@@ -406,7 +405,7 @@ public class Station {
 
     // POST request?
     public void writeTCP(SelectionKey key) throws IOException {
-        System.out.println("FOUND 2");
+        // System.out.println("FOUND 2");
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
@@ -423,7 +422,7 @@ public class Station {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
-        System.out.println(message);
+        // System.out.println(message);
         buffer.clear();
 
     }
@@ -465,56 +464,55 @@ public class Station {
             station.readTimetableIn();
             station.run(webPort, stationDatagrams, otherStationDatagrams);
 
-            // station.currentStation = "North_Terminus";
-            // station.requiredDestination = "North_Terminus";
-            // System.out.println(station.isFinalStation());
-            // station.isOutgoing = true;
-            // station.requiredDestination = "North_Terminus";
-            // station.originDepartureTime = "9:00";
-            // station.numberStationsStoppedAt = 2;
-            // station.lastNodePort = 4002;
-            // station.hasReachedFinalStation = true;
-
-            // ArrayList<String> destinations = new ArrayList<String>();
-            // ArrayList<String> departureTimes = new ArrayList<String>();
-            // ArrayList<String> arrivalTimes = new ArrayList<String>();
-            // destinations.add("Subiaco");
-            // destinations.add("Thornlie");
-            // departureTimes.add("09:00");
-            // departureTimes.add("09:45");
-            // arrivalTimes.add("09:10");
-            // arrivalTimes.add("10:00");
-
-            // String testDatagram = station.constructDatagram(station.isOutgoing,
-            // station.requiredDestination,
-            // station.originDepartureTime, station.numberStationsStoppedAt, destinations,
-            // departureTimes,
-            // arrivalTimes, station.lastNodePort, station.hasReachedFinalStation);
-            // System.out.println("TEST" + testDatagram);
-
-            // station.reset();
-
-            // station.readDatagramIn(testDatagram);
-            // System.out.println("isOutgoing =" + station.isOutgoing);
-            // System.out.println("requiredDestination =" + station.requiredDestination);
-            // System.out.println("originDepartureTime =" + station.originDepartureTime);
-            // System.out.println("numberStationsStoppedAt =" +
-            // station.numberStationsStoppedAt);
-            // System.out.println("lastNodePort =" + station.lastNodePort);
-            // System.out.println("hasReachedFinalStation =" +
-            // station.hasReachedFinalStation);
-
-            // station.currentStation = "North_Terminus";
-            // System.out.println("isFinalStation" + station.isFinalStation());
-            // for (int i = 0; i < station.destinations.size(); i++) {
-            // System.out.println("destinations =" + station.destinations.get(i));
-            // System.out.println("departureTimes =" + station.departureTimes.get(i));
-            // System.out.println("arrivalTimes =" + station.arrivalTimes.get(i));
-            // }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
 }
+// station.currentStation = "North_Terminus";
+// station.requiredDestination = "North_Terminus";
+// System.out.println(station.isFinalStation());
+// station.isOutgoing = true;
+// station.requiredDestination = "North_Terminus";
+// station.originDepartureTime = "9:00";
+// station.numberStationsStoppedAt = 2;
+// station.lastNodePort = 4002;
+// station.hasReachedFinalStation = true;
+
+// ArrayList<String> destinations = new ArrayList<String>();
+// ArrayList<String> departureTimes = new ArrayList<String>();
+// ArrayList<String> arrivalTimes = new ArrayList<String>();
+// destinations.add("Subiaco");
+// destinations.add("Thornlie");
+// departureTimes.add("09:00");
+// departureTimes.add("09:45");
+// arrivalTimes.add("09:10");
+// arrivalTimes.add("10:00");
+
+// String testDatagram = station.constructDatagram(station.isOutgoing,
+// station.requiredDestination,
+// station.originDepartureTime, station.numberStationsStoppedAt, destinations,
+// departureTimes,
+// arrivalTimes, station.lastNodePort, station.hasReachedFinalStation);
+// System.out.println("TEST" + testDatagram);
+
+// station.reset();
+
+// station.readDatagramIn(testDatagram);
+// System.out.println("isOutgoing =" + station.isOutgoing);
+// System.out.println("requiredDestination =" + station.requiredDestination);
+// System.out.println("originDepartureTime =" + station.originDepartureTime);
+// System.out.println("numberStationsStoppedAt =" +
+// station.numberStationsStoppedAt);
+// System.out.println("lastNodePort =" + station.lastNodePort);
+// System.out.println("hasReachedFinalStation =" +
+// station.hasReachedFinalStation);
+
+// station.currentStation = "North_Terminus";
+// System.out.println("isFinalStation" + station.isFinalStation());
+// for (int i = 0; i < station.destinations.size(); i++) {
+// System.out.println("destinations =" + station.destinations.get(i));
+// System.out.println("departureTimes =" + station.departureTimes.get(i));
+// System.out.println("arrivalTimes =" + station.arrivalTimes.get(i));
+// }
