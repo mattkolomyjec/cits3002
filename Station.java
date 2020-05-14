@@ -39,7 +39,13 @@ public class Station {
     int[] otherStationDatagrams;
     String latitude;
     String longitude;
-    ArrayList<String> destinations = new ArrayList<String>();
+
+    // Timetable Variables
+    ArrayList<String> timetableDepartureTime = new ArrayList<String>();
+    ArrayList<String> timetableLine = new ArrayList<String>();
+    ArrayList<String> timetablePlatform = new ArrayList<String>();
+    ArrayList<String> timetableArrivalTime = new ArrayList<String>();
+    ArrayList<String> timetableDestinations = new ArrayList<String>();
 
     // Other Variables
     private Selector selector;
@@ -55,8 +61,7 @@ public class Station {
     }
 
     public void readTimetableIn() throws FileNotFoundException {
-
-        File file = new File("routes.txt");
+        File file = new File("google_transit/tt-Cottesloe_Stn");
         Scanner sc = new Scanner(file);
 
         String temp[] = ((sc.nextLine()).split(","));
@@ -66,11 +71,14 @@ public class Station {
 
         while (sc.hasNextLine()) {
             String tempRoutes[] = ((sc.nextLine()).split(","));
-            for (int i = 0; i < tempRoutes.length; i++) {
-                destinations.add(tempRoutes[i]);
+            for (int i = 0; i < tempRoutes.length - 4; i += 4) {
+                timetableDepartureTime.add(tempRoutes[i]);
+                timetableLine.add(tempRoutes[i + 1]);
+                timetablePlatform.add(tempRoutes[i + 2]);
+                timetableArrivalTime.add(tempRoutes[i + 3]);
+                timetableDestinations.add(tempRoutes[i + 4]);
             }
         }
-        sc.close();
     }
 
     public boolean isFinalStation() {
