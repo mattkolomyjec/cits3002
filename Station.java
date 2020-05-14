@@ -7,9 +7,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.Scanner;
-
-import javax.security.auth.DestroyFailedException;
-
 import java.util.*;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -21,6 +18,7 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 /*
+import javax.security.auth.DestroyFailedException;
 import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -51,6 +49,7 @@ public class Station {
     ArrayList<String> arrivalTimes = new ArrayList<String>();
     int lastNodePort;
     boolean hasReachedFinalStation;
+    String homeStation;
 
     // Station Variables
     String currentStation;
@@ -79,7 +78,7 @@ public class Station {
         Scanner sc = new Scanner(file);
 
         String temp[] = ((sc.nextLine()).split(","));
-        currentStation = temp[0];
+        // currentStation = temp[0];
         latitude = temp[1];
         longitude = temp[2];
 
@@ -95,13 +94,11 @@ public class Station {
     public boolean isFinalStation() {
         boolean result = false;
         String c = currentStation.trim();
-        // System.out.println("currentS =" + c);
         String r = requiredDestination.trim();
-        // System.out.println("reqioredD =" + r);
         if (c.contains(r)) {
             result = true;
         }
-        // System.out.println("isFinalStation = " + result);
+
         return result;
     }
 
@@ -138,7 +135,7 @@ public class Station {
 
     public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
             int numberStationsStoppedAt, ArrayList<String> path, ArrayList<String> departureTimes,
-            ArrayList<String> arrivalTimes, int lastNodePort, boolean hasReachedFinalDestination) {
+            ArrayList<String> arrivalTimes, int lastNodePort, boolean hasReachedFinalDestination, String homeStation) {
         String result;
         if (isOutgoing) {
             result = "Outgoing \n";
@@ -146,11 +143,10 @@ public class Station {
             result = "Incoming \n";
         }
         result += requiredDestination + " " + originDepartureTime + " " + numberStationsStoppedAt + " " + lastNodePort
-                + " " + hasReachedFinalStation + " \n";
+                + " " + hasReachedFinalStation + " " + homeStation + " \n";
         for (int i = 0; i < path.size(); i++) {
             result += path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i) + " \n";
         }
-        System.out.println("datagram =" + result);
         return result;
     }
 
@@ -164,6 +160,7 @@ public class Station {
         arrivalTimes.clear();
         lastNodePort = 0;
         hasReachedFinalStation = false;
+        homeStation = "";
     }
 
     public void readDatagramIn(String message) {
@@ -197,9 +194,14 @@ public class Station {
             hasReachedFinalStation = false;
         }
 
-        int pathIndex = 6;
-        int departureIndex = 7;
-        int arrivalIndex = 8;
+        trimString = "";
+        trimString = temp[6];
+        trimString.trim();
+        homeStation = trimString;
+
+        int pathIndex = 7;
+        int departureIndex = 8;
+        int arrivalIndex = 9;
         for (int i = 0; i < numberStationsStoppedAt; i++) {
             path.add(temp[pathIndex]);
             pathIndex += 3;
@@ -211,18 +213,9 @@ public class Station {
     }
 
     public void datagramChecks() throws IOException {
-        // System.out.println("REACHED 2");
         System.out.println("isFinalStation =" + isFinalStation());
         System.out.println("isOutgoing" + isOutgoing);
         System.out.println("hasReachedFinalDestination 214 =" + hasReachedFinalStation);
-
-        // finalStation = true;
-        // hasReached = true;
-        // isOutgoing = false;
-
-        // if (isFinalStation()) {
-        // hasReachedFinalStation = true;
-        // }
 
         String message;
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
@@ -237,8 +230,9 @@ public class Station {
             addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
 
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
-                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation);
+                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation);
             for (int i = 0; i < otherStationDatagrams.length; i++) {
+                System.out.println("Node sent to =" + otherStationDatagrams[i]);
                 writeUDP(message, otherStationDatagrams[i]);
             }
         } else if (!isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 2 - Has not reached required
@@ -246,8 +240,6 @@ public class Station {
             // to continue travelling to it
             numberStationsStoppedAt++;
             System.out.println("REACHED 4");
-            System.out.println("Required Destination 237 =" + requiredDestination);
-            System.out.println("Current Station 238 =" + currentStation);
 
             int oldPort = lastNodePort;
             lastNodePort = receivingDatagram;
@@ -255,7 +247,7 @@ public class Station {
             addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
 
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
-                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation);
+                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation);
             for (int i = 0; i < otherStationDatagrams.length; i++) {
                 if (otherStationDatagrams[i] == oldPort) {
                     continue;
@@ -269,18 +261,31 @@ public class Station {
             System.out.println("REACHED 5");
 
             int oldPort = lastNodePort;
+            System.out.println("Last port =" + oldPort);
             lastNodePort = receivingDatagram;
 
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
-                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation);
+                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation);
             for (int i = 0; i < otherStationDatagrams.length; i++) {
                 if (otherStationDatagrams[i] == oldPort) {
                     continue;
                 } else {
+                    System.out.println("Node sent to =" + otherStationDatagrams[i]);
                     writeUDP(message, otherStationDatagrams[i]);
                 }
             }
-        }
+        } /*
+           * else if (!isOutgoing && hasReachedFinalStation) {
+           * 
+           * System.out.println("REACHAMASSIVE"); int oldPort = lastNodePort; lastNodePort
+           * = receivingDatagram;
+           * 
+           * message = constructDatagram(isOutgoing, requiredDestination,
+           * originDepartureTime, numberStationsStoppedAt, path, departureTimes,
+           * arrivalTimes, lastNodePort, hasReachedFinalStation); for (int i = 0; i <
+           * otherStationDatagrams.length; i++) { if (otherStationDatagrams[i] == oldPort)
+           * { continue; } else { writeUDP(message, otherStationDatagrams[i]); } } }
+           */
     }
 
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
@@ -334,20 +339,20 @@ public class Station {
                         this.readTCP(key);
                     }
                 } else if (key.isWritable()) {
-                    System.out.println("REACHAROO");
-                    // System.out.println("Current Station is " + currentStation);
-                    // System.out.println("Required Destination is " + requiredDestination);
-                    // System.out.println("isFinalStation =" + isFinalStation());
-                    // System.out.println("isOutgoing =" + isOutgoing);
-
-                    // System.out.println("hasReachedFinalDestination" + hasReachedFinalStation); //
-                    // NEEDS TO SIT IN
-                    // DATAGRAM!! !! !!
-                    if (hasReachedFinalStation && !isOutgoing) {
-                        System.out.println("REACHA");
+                    // System.out.println("Reacharoo");
+                    // System.out.println("hasReachedFinalStation" + hasReachedFinalStation);
+                    // System.out.println("isOutgoing" + isOutgoing);
+                    // System.out.println("Writable current station =" + currentStation);
+                    // System.out.println("contains =" + currentStation.contains(homeStation));
+                    if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                         this.writeTCP(key);
                         // break;
+
                     }
+                    // channel.register(this.selector, SelectionKey.OP_READ);
+                    serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
+                    break;
+
                     // break;
                 }
             }
@@ -406,8 +411,10 @@ public class Station {
         // Flood datagrams to all ports
         lastNodePort = receivingDatagram;
         isOutgoing = true;
+        homeStation = currentStation;
         String message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
-                numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation);
+                numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation,
+                homeStation);
         for (int i = 0; i < otherStationDatagrams.length; i++) {
             writeUDP(message, otherStationDatagrams[i]);
         }
@@ -427,7 +434,17 @@ public class Station {
         readDatagramIn(msg);
         System.out.println(msg);
 
-        datagramChecks();
+        System.out.println("Current Station=" + currentStation);
+        System.out.println("Home Station =" + homeStation);
+        System.out.println(currentStation.contains(homeStation));
+
+        if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
+            System.out.println("NiHao");
+            channel.register(this.selector, SelectionKey.OP_WRITE);
+        } else {
+            datagramChecks();
+            // channel.register(this.selector, SelectionKey.OP_READ);
+        }
 
     }
 
@@ -449,7 +466,7 @@ public class Station {
         channel.write(buffer);
         System.out.println(message);
         buffer.clear();
-        channel.register(this.selector, SelectionKey.OP_READ);
+
     }
 
     public void writeUDP(String message, int port) throws SocketException {
@@ -468,12 +485,6 @@ public class Station {
             e.printStackTrace();
         }
     }
-    // Receiveing the Datagram
-    /*
-     * byte[] buffer = new byte[1000]; DatagramPacket reply = new
-     * DatagramPacket(buffer, buffer.length); skt.receive(reply); String result =
-     * new String(reply.getData()); datagramClientMessage = result; skt.close();
-     */
 
     public static void main(String args[]) {
         if (args.length < 4) {
@@ -494,6 +505,7 @@ public class Station {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
             station.readTimetableIn();
             station.run(webPort, stationDatagrams, otherStationDatagrams);
+
             // station.currentStation = "North_Terminus";
             // station.requiredDestination = "North_Terminus";
             // System.out.println(station.isFinalStation());
@@ -547,33 +559,3 @@ public class Station {
     }
 
 }
-
-// public void writeMessage(String[] messages) throws IOException {
-
-// for (int i = 0; i < messages.length; i++) {
-// InetSocketAddress hostAddress = new InetSocketAddress("localhost", 2041);
-// SocketChannel client = SocketChannel.open(hostAddress);
-// System.out.println("Client... started");
-// ByteBuffer buffer = ByteBuffer.allocate(74);
-// buffer.put(messages[i].getBytes());
-// buffer.flip();
-// client.write(buffer);
-// System.out.println(messages[i]);
-// buffer.clear();
-// }
-
-// }
-
-// ArrayList<String> destinations = new ArrayList<String>();
-// ArrayList<String> departureTimes = new ArrayList<String>();
-// ArrayList<String> arrivalTimes = new ArrayList<String>();
-// destinations.add("Subiaco");
-// destinations.add("Thornlie");
-// departureTimes.add("09:00");
-// departureTimes.add("09:45");
-// arrivalTimes.add("09:10");
-// arrivalTimes.add("10:00");
-
-// String test = station.constructDatagram(true, "Fremantle", "08:45", 2,
-// destinations, departureTimes,
-// arrivalTimes);
