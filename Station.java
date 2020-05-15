@@ -24,7 +24,7 @@ import java.time.LocalTime;
 public class Station {
 
     // Message Variables
-    String requiredDestination; // The intended destination of the user. WILL CAPS LOCK AFFECT THIS?
+    String requiredDestination;
     boolean isOutgoing;
     String originDepartureTime;
     int numberStationsStoppedAt;
@@ -60,6 +60,15 @@ public class Station {
     int receievedOtherStationNamesCount = 0;
     int[] receievedOtherStationPortsUnique;
 
+    /**
+     * A method to create an instance of the Station object
+     * 
+     * @param currentStation        the name of the current station
+     * @param webPort               the port to open HTML hosting with
+     * @param receivingDatagram     the port to recieve UDP communications from
+     *                              other stations
+     * @param otherStationDatagrams the receiving ports of adjacent stations
+     */
     public Station(String currentStation, int webPort, int receivingDatagram, int[] otherStationDatagrams) {
         this.webPort = webPort;
         this.currentStation = currentStation;
@@ -68,6 +77,11 @@ public class Station {
         receievedOtherStationPortsUnique = new int[otherStationDatagrams.length];
     }
 
+    /***
+     * A method to read the Transperth timetable data in
+     * 
+     * @throws FileNotFoundException if the file cannot be located
+     */
     public void readTimetableIn() throws FileNotFoundException {
         String chosenStation = "tt-" + currentStation;
         File file = new File("google_transit/" + chosenStation);
@@ -90,6 +104,13 @@ public class Station {
         timetablePorts = new int[timetableDestinations.size()];
     }
 
+    /***
+     * A method to add the receieving port numbers to their corresponding station in
+     * the transperth timetable data
+     * 
+     * @param ports a Hashmap detailing the name of station and its receving port
+     *              number
+     */
     public void addPortsToTimetable(HashMap<String, Integer> ports) {
         for (int i = 0; i < timetableDestinations.size(); i++) {
             String currentKey = timetableDestinations.get(i);
@@ -99,6 +120,11 @@ public class Station {
         }
     }
 
+    /***
+     * A method to receive the names and port numbers of adjacent stations.
+     * 
+     * @param message the UDP message read in
+     */
     public void receiveOtherStationNames(String message) {
         String temp[] = message.split("\n");
         HashMap<String, Integer> map = new HashMap<String, Integer>();
@@ -106,6 +132,14 @@ public class Station {
         addPortsToTimetable(map);
     }
 
+    /***
+     * A method to determine if adjacent station port number has already been read
+     * in
+     * 
+     * @param message
+     * @return result indicating where the read in is unique (false) or not unique
+     *         (true)
+     */
     public boolean checkIfPortIsNotUnique(String message) {
         boolean result = false;
         String temp[] = message.split("\n");
@@ -119,6 +153,12 @@ public class Station {
         return result;
     }
 
+    /***
+     * A method to send adjacent stations the name and recieving port number of this
+     * station
+     * 
+     * @throws IOException if the IO does not work
+     */
     public void sendOtherStationNames() throws IOException {
         String message = "#" + "\n" + currentStation + "\n" + receivingDatagram;
         for (int i = 0; i < otherStationDatagrams.length; i++) {
@@ -126,17 +166,29 @@ public class Station {
         }
     }
 
+    /***
+     * A method to determine if a given datagram is at its required destination or
+     * not
+     * 
+     * @return true if the datagram is at its required destination and false if not
+     */
     public boolean isFinalStation() {
         boolean result = false;
-        String c = currentStation.trim();
-        String r = requiredDestination.trim();
-        if (c.contains(r)) {
+        String current = currentStation.trim();
+        String required = requiredDestination.trim();
+        if (current.contains(required)) {
             result = true;
         }
 
         return result;
     }
 
+    /***
+     * A method to seperate the required destination from the GET request sent by
+     * the HTML form
+     * 
+     * @param body the HTML form GET request
+     */
     public void separateUserInputs(String body) {
         String[] temp = body.split("(?!^)");
         int startIndex = 0;
@@ -154,13 +206,24 @@ public class Station {
         requiredDestination.trim();
     }
 
-    // Problem, not necessarily the fastest route. Could be better to leave later
-    // for next stop to be shorter?
+    /**
+     * A method to add the current stations data (including timetabling) to the
+     * outbound datagram
+     * 
+     * @param path           the path travelled so far by the datagram
+     * @param departureTimes the departure times of the datagram so far along its
+     *                       path
+     * @param arrivalTimes   the arrival times of the datagram so far along its path
+     * @param portNumber     the outbound port number
+     */
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes, int portNumber) {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime now = LocalTime.now();
         System.out.println(dtf.format(now));
+
+        // Problem, not necessarily the fastest route. Could be better to leave later
+        // for next stop to be shorter?
 
         path.add(currentStation);
         int index = 0;
@@ -178,6 +241,12 @@ public class Station {
         arrivalTimes.add(timetableArrivalTime.get(index));
     }
 
+    /***
+     * A method to determine what the depature time of the origin was
+     * 
+     * @param port the outbound port number
+     * @return the origin depature time
+     */
     public String determineOriginDepartureTime(int port) {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime now = LocalTime.now();
@@ -198,6 +267,29 @@ public class Station {
 
     }
 
+    /***
+     * A method to construct a datgram message in the established protocol format
+     * 
+     * @param isOutgoing                 whether the datagram is outgoing or
+     *                                   incoming
+     * @param requiredDestination        the required destination of the datagram
+     *                                   message
+     * @param originDepartureTime        the depature time from the origin
+     * @param numberStationsStoppedAt    the number of stations the datgram has
+     *                                   stopped at along its path
+     * @param path                       the stations the datagram has stopped at
+     *                                   along its path
+     * @param departureTimes             the times of depature along the datagram's
+     *                                   path
+     * @param arrivalTimes               the times of arrival along the datagram's
+     *                                   path
+     * @param lastNodePort               the port number of the station last stopped
+     *                                   at
+     * @param hasReachedFinalDestination whether the datagram has reached its final
+     *                                   destination or not
+     * @param homeStation                the origin of the datagram
+     * @return a String in the required datagram format
+     */
     public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
             int numberStationsStoppedAt, ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes, int lastNodePort, boolean hasReachedFinalDestination, String homeStation) {
@@ -215,6 +307,9 @@ public class Station {
         return result;
     }
 
+    /***
+     * A method to reset all the message variables as a new message is read in
+     */
     public void reset() {
         isOutgoing = true;
         requiredDestination = "";
@@ -228,6 +323,13 @@ public class Station {
         homeStation = "";
     }
 
+    /***
+     * A method the check that a read in datagram does not have any null values
+     * (which indicate an error)
+     * 
+     * @param message the datagram read in
+     * @return true if the datgram has null variables in it
+     */
     public boolean datagramHasNull(String message) {
         boolean result = false;
         String temp[] = message.split(" ");
@@ -240,6 +342,11 @@ public class Station {
         return result;
     }
 
+    /***
+     * A method to read a datagram in
+     * 
+     * @param message the datagram message sent to the station
+     */
     public void readDatagramIn(String message) {
         reset();
         try {
@@ -295,6 +402,12 @@ public class Station {
         }
     }
 
+    /***
+     * A method to determine the next location of the datagram once it has been read
+     * in
+     * 
+     * @throws IOException should the IO not work
+     */
     public void datagramChecks() throws IOException {
         String message;
         System.out.println("Required Station = " + requiredDestination);
@@ -354,6 +467,14 @@ public class Station {
         }
     }
 
+    /***
+     * A method to run the core server via Select()
+     * 
+     * @param webPort               the port to host HTML on
+     * @param receivingDatagram     the port receiving datagrams from other stations
+     * @param otherStationDatagrams the receiving ports of adjacent stations
+     * @throws IOException should IO not work
+     */
     public void run(int webPort, int receivingDatagram, int[] otherStationDatagrams) throws IOException {
         readTimetableIn();
 
@@ -459,7 +580,12 @@ public class Station {
         }
     }
 
-    // accept client connection
+    /***
+     * A method to accept the channel distributed via Select()
+     * 
+     * @param key the key of the channel with activity
+     * @throws IOException
+     */
     private void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel channel = serverChannel.accept();
@@ -483,7 +609,12 @@ public class Station {
 
     }
 
-    // read from the socket channel
+    /***
+     * A method to read TCP activity from the web page
+     * 
+     * @param key the key of the channel with activity
+     * @throws IOException
+     */
     private void readTCP(SelectionKey key) throws IOException {
 
         SocketChannel channel = (SocketChannel) key.channel();
@@ -521,6 +652,12 @@ public class Station {
         }
     }
 
+    /***
+     * A method to read a UDP datagram in
+     * 
+     * @param key the key of the channel with activity
+     * @throws IOException if IO does not work
+     */
     public void readUDP(SelectionKey key) throws IOException {
         DatagramChannel channel = (DatagramChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
@@ -562,9 +699,13 @@ public class Station {
         }
     }
 
-    // POST request?
+    /***
+     * A method to write HTML to the TCP port
+     * 
+     * @param key the key of the channel with activity
+     * @throws IOException if IO does not work
+     */
     public void writeTCP(SelectionKey key) throws IOException {
-        // System.out.println("FOUND 2");
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
@@ -581,11 +722,17 @@ public class Station {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
-        // System.out.println(message);
         buffer.clear();
 
     }
 
+    /***
+     * A method to send a datagram to a specified port
+     * 
+     * @param message the message to be sent
+     * @param port    the port to send the message to
+     * @throws SocketException if IO does not work
+     */
     public void writeUDP(String message, int port) throws SocketException {
         if (message != null) {
             DatagramSocket skt;
