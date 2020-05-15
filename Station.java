@@ -47,13 +47,15 @@ public class Station {
     ArrayList<String> timetablePlatform = new ArrayList<String>();
     ArrayList<String> timetableArrivalTime = new ArrayList<String>();
     ArrayList<String> timetableDestinations = new ArrayList<String>();
-    ArrayList<Integer> timetablePorts = new ArrayList<Integer>();
+    int[] timetablePorts;
 
     // Other Variables
     private Selector selector;
     public static final String httpHeader = "HTTP/1.1 200 OK\r\n";
     public static final String contentType = "Content-Type: text/html\r\n";
     String datagramClientMessage;
+    boolean hasReceivedOtherStationNames = false;
+    int receievedOtherStationNamesCount = 0;
 
     public Station(String currentStation, int webPort, int receivingDatagram, int[] otherStationDatagrams) {
         this.webPort = webPort;
@@ -82,6 +84,7 @@ public class Station {
                 timetableDestinations.add(tempRoutes[i + 4]);
             }
         }
+        timetablePorts = new int[timetableDestinations.size()];
     }
 
     // <currentStation, port> <key, value>
@@ -89,8 +92,7 @@ public class Station {
         for (int i = 0; i < timetableDestinations.size(); i++) {
             String currentKey = timetableDestinations.get(i);
             if (ports.containsKey(currentKey)) {
-                timetablePorts.add(i, ports.get(currentKey));
-                System.out.println(timetablePorts.get(i));
+                timetablePorts[i] = ports.get(currentKey);
             }
         }
     }
@@ -100,11 +102,7 @@ public class Station {
     // CurrentStation
     // Receiving Port Number
 
-    // send message to other stations
-    // recall their "currentStation";
-    // insert into a hashmap
-
-    public void receiveOtherStationNames(String message) throws IOException {
+    public void receiveOtherStationNames(String message) {
         String temp[] = message.split("\n");
         HashMap<String, Integer> map = new HashMap<String, Integer>();
         map.put(temp[1], Integer.parseInt(temp[2]));
@@ -112,7 +110,10 @@ public class Station {
     }
 
     public void sendOtherStationNames() throws IOException {
-        // receieve other stations requesting "currentStation"
+        String message = "#" + "\n" + currentStation + "\n" + receivingDatagram;
+        for (int i = 0; i < otherStationDatagrams.length; i++) {
+            writeUDP(message, otherStationDatagrams[i]);
+        }
     }
 
     public boolean isFinalStation() {
@@ -237,6 +238,8 @@ public class Station {
 
     public void datagramChecks() throws IOException {
         String message;
+        System.out.println("Required Station = " + requiredDestination);
+        System.out.println("Current Station = " + currentStation);
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
             // to start node
@@ -313,6 +316,36 @@ public class Station {
         channel.socket().bind(new InetSocketAddress(receivingDatagram));
         channel.register(selector, SelectionKey.OP_READ);
 
+        // Send station names until receieved
+        while (!hasReceivedOtherStationNames) {
+            sendOtherStationNames();
+
+            int readyCount = selector.select();
+            if (readyCount == 0) {
+                sendOtherStationNames();
+                continue;
+            }
+
+            Set<SelectionKey> readyKeys = selector.selectedKeys();
+            Iterator iterator = readyKeys.iterator();
+            while (iterator.hasNext()) {
+                SelectionKey key = (SelectionKey) iterator.next();
+
+                iterator.remove();
+
+                if (!key.isValid()) {
+                    continue;
+                }
+
+                if (key.isReadable()) {
+                    sendOtherStationNames();
+                    if (channel.keyFor(selector) == key) {
+                        this.readUDP(key);
+                    }
+                }
+            }
+        }
+
         System.out.println("Server started on port >> " + webPort);
 
         while (true) {
@@ -367,7 +400,6 @@ public class Station {
                 }
             }
         }
-
     }
 
     // accept client connection
@@ -434,6 +466,7 @@ public class Station {
         DatagramChannel channel = (DatagramChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         SocketAddress remoteAdd = channel.receive(buffer);
+
         buffer.flip();
         int limits = buffer.limit();
         byte bytes[] = new byte[limits];
@@ -441,16 +474,31 @@ public class Station {
         String msg = new String(bytes);
         System.out.println("Client at " + remoteAdd + "  sent: " + msg);
         // channel.send(buffer, remoteAdd);
-        readDatagramIn(msg);
-        // System.out.println(msg);
 
-        if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
-            channel.register(this.selector, SelectionKey.OP_WRITE);
+        boolean readMessageIn = false;
+        if (msg.startsWith("#") /* && hasReceivedOtherStationNames */) {
+            receievedOtherStationNamesCount++;
+            if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
+                receiveOtherStationNames(msg);
+                hasReceivedOtherStationNames = true;
+            } else {
+                receiveOtherStationNames(msg);
+            }
         } else {
-            datagramChecks();
-            // channel.register(this.selector, SelectionKey.OP_READ);
+            if (msg != null) {
+                readDatagramIn(msg);
+                readMessageIn = true;
+            }
         }
-
+        // System.out.println(msg);
+        if (readMessageIn) {
+            if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
+                channel.register(this.selector, SelectionKey.OP_WRITE);
+            } else {
+                datagramChecks();
+                // channel.register(this.selector, SelectionKey.OP_READ);
+            }
+        }
     }
 
     // POST request?
@@ -515,10 +563,8 @@ public class Station {
             // #
             // CurrentStation
             // Receiving Port Number
-            String message = "#" + "\n" + "Warwick-Stn" + "\n" + "4003";
-            station.receiveOtherStationNames(message);
 
-            // station.run(webPort, stationDatagrams, otherStationDatagrams);
+            station.run(webPort, stationDatagrams, otherStationDatagrams);
 
         } catch (IOException e) {
             e.printStackTrace();
