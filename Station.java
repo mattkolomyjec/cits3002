@@ -56,12 +56,14 @@ public class Station {
     String datagramClientMessage;
     boolean hasReceivedOtherStationNames = false;
     int receievedOtherStationNamesCount = 0;
+    int[] receievedOtherStationPortsUnique;
 
     public Station(String currentStation, int webPort, int receivingDatagram, int[] otherStationDatagrams) {
         this.webPort = webPort;
         this.currentStation = currentStation;
         this.receivingDatagram = receivingDatagram;
         this.otherStationDatagrams = otherStationDatagrams;
+        receievedOtherStationPortsUnique = new int[otherStationDatagrams.length];
     }
 
     public void readTimetableIn() throws FileNotFoundException {
@@ -97,16 +99,24 @@ public class Station {
         }
     }
 
-    // Protocol
-    // #
-    // CurrentStation
-    // Receiving Port Number
-
     public void receiveOtherStationNames(String message) {
         String temp[] = message.split("\n");
         HashMap<String, Integer> map = new HashMap<String, Integer>();
         map.put(temp[1], Integer.parseInt(temp[2]));
         addPortsToTimetable(map);
+    }
+
+    public boolean checkIfPortIsNotUnique(String message) {
+        boolean result = false;
+        String temp[] = message.split("\n");
+        int portInReference = Integer.parseInt(temp[2]);
+        for (int i = 0; i < receievedOtherStationPortsUnique.length; i++) {
+            if (receievedOtherStationPortsUnique[i] == portInReference) {
+                result = true;
+                break;
+            }
+        }
+        return result;
     }
 
     public void sendOtherStationNames() throws IOException {
@@ -180,6 +190,18 @@ public class Station {
         lastNodePort = 0;
         hasReachedFinalStation = false;
         homeStation = "";
+    }
+
+    public boolean datagramHasNull(String message) {
+        boolean result = false;
+        String temp[] = message.split(" ");
+        for (int i = 0; i < temp.length; i++) {
+            if (temp[i].contains("null")) {
+                result = true;
+                break;
+            }
+        }
+        return result;
     }
 
     public void readDatagramIn(String message) {
@@ -477,15 +499,17 @@ public class Station {
 
         boolean readMessageIn = false;
         if (msg.startsWith("#") /* && hasReceivedOtherStationNames */) {
-            receievedOtherStationNamesCount++;
-            if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
-                receiveOtherStationNames(msg);
-                hasReceivedOtherStationNames = true;
-            } else {
-                receiveOtherStationNames(msg);
+            if (!checkIfPortIsNotUnique(msg)) {
+                receievedOtherStationNamesCount++;
+                if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
+                    receiveOtherStationNames(msg);
+                    hasReceivedOtherStationNames = true;
+                } else {
+                    receiveOtherStationNames(msg);
+                }
             }
         } else {
-            if (msg != null) {
+            if (msg != null && !datagramHasNull(msg)) {
                 readDatagramIn(msg);
                 readMessageIn = true;
             }
@@ -526,19 +550,21 @@ public class Station {
     }
 
     public void writeUDP(String message, int port) throws SocketException {
-        DatagramSocket skt;
-        try {
-            // Sending the Datagram
-            skt = new DatagramSocket();
-            byte[] b = message.getBytes();
-            InetAddress host = InetAddress.getByName("localhost");
-            DatagramPacket request = new DatagramPacket(b, b.length, host, port);
-            // System.out.println("REACHED 4");
-            skt.send(request);
-            skt.close();
+        if (message != null) {
+            DatagramSocket skt;
+            try {
+                // Sending the Datagram
+                skt = new DatagramSocket();
+                byte[] b = message.getBytes();
+                InetAddress host = InetAddress.getByName("localhost");
+                DatagramPacket request = new DatagramPacket(b, b.length, host, port);
+                // System.out.println("REACHED 4");
+                skt.send(request);
+                skt.close();
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -559,19 +585,18 @@ public class Station {
         }
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
-            // Protocol
-            // #
-            // CurrentStation
-            // Receiving Port Number
-
             station.run(webPort, stationDatagrams, otherStationDatagrams);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
 }
+
+// Protocol
+// #
+// CurrentStation
+// Receiving Port Number
 // station.currentStation = "North_Terminus";
 // station.requiredDestination = "North_Terminus";
 // System.out.println(station.isFinalStation());
