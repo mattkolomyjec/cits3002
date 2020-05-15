@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.util.HashMap;
 
 public class Station {
 
@@ -46,6 +47,7 @@ public class Station {
     ArrayList<String> timetablePlatform = new ArrayList<String>();
     ArrayList<String> timetableArrivalTime = new ArrayList<String>();
     ArrayList<String> timetableDestinations = new ArrayList<String>();
+    ArrayList<Integer> timetablePorts = new ArrayList<Integer>();
 
     // Other Variables
     private Selector selector;
@@ -80,6 +82,37 @@ public class Station {
                 timetableDestinations.add(tempRoutes[i + 4]);
             }
         }
+    }
+
+    // <currentStation, port> <key, value>
+    public void addPortsToTimetable(HashMap<String, Integer> ports) {
+        for (int i = 0; i < timetableDestinations.size(); i++) {
+            String currentKey = timetableDestinations.get(i);
+            if (ports.containsKey(currentKey)) {
+                timetablePorts.add(i, ports.get(currentKey));
+                System.out.println(timetablePorts.get(i));
+            }
+        }
+    }
+
+    // Protocol
+    // #
+    // CurrentStation
+    // Receiving Port Number
+
+    // send message to other stations
+    // recall their "currentStation";
+    // insert into a hashmap
+
+    public void receiveOtherStationNames(String message) throws IOException {
+        String temp[] = message.split("\n");
+        HashMap<String, Integer> map = new HashMap<String, Integer>();
+        map.put(temp[1], Integer.parseInt(temp[2]));
+        addPortsToTimetable(map);
+    }
+
+    public void sendOtherStationNames() throws IOException {
+        // receieve other stations requesting "currentStation"
     }
 
     public boolean isFinalStation() {
@@ -478,7 +511,14 @@ public class Station {
         }
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
-            station.run(webPort, stationDatagrams, otherStationDatagrams);
+            // Protocol
+            // #
+            // CurrentStation
+            // Receiving Port Number
+            String message = "#" + "\n" + "Warwick-Stn" + "\n" + "4003";
+            station.receiveOtherStationNames(message);
+
+            // station.run(webPort, stationDatagrams, otherStationDatagrams);
 
         } catch (IOException e) {
             e.printStackTrace();
