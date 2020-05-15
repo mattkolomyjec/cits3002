@@ -18,6 +18,8 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.HashMap;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalTime;
 
 public class Station {
 
@@ -155,11 +157,42 @@ public class Station {
         requiredDestination.trim();
     }
 
+    // Problem, not necessarily the fastest route. Could be better to leave later
+    // for next stop to be shorter?
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
-            ArrayList<String> arrivalTimes) {
+            ArrayList<String> arrivalTimes, int portNumber) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
+        LocalTime now = LocalTime.now();
+        System.out.println(dtf.format(now));
+
         path.add(currentStation);
-        departureTimes.add("TEST");
-        arrivalTimes.add("TEST");
+        int index = 0;
+        for (int i = 0; i < timetableDepartureTime.size(); i++) {
+            String timetableString = timetableDepartureTime.get(i);
+            LocalTime time = LocalTime.parse(timetableString, dtf);
+            if (time.isAfter(now) && timetablePorts[i] == portNumber) {
+                index = i;
+                break;
+            }
+        }
+        departureTimes.add(timetableDepartureTime.get(index));
+        arrivalTimes.add(timetableArrivalTime.get(index));
+    }
+
+    public String determineOriginDepartureTime(int port) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
+        LocalTime now = LocalTime.now();
+        int index = 0;
+        for (int i = 0; i < timetableDepartureTime.size(); i++) {
+            String timetableString = timetableDepartureTime.get(i);
+            LocalTime time = LocalTime.parse(timetableString, dtf);
+            if (time.isAfter(now) && timetablePorts[i] == port) {
+                index = i;
+                break;
+            }
+        }
+        originDepartureTime = timetableDepartureTime.get(index);
+        return originDepartureTime;
     }
 
     public String constructDatagram(boolean isOutgoing, String requiredDestination, String originDepartureTime,
@@ -271,12 +304,14 @@ public class Station {
             numberStationsStoppedAt++;
 
             lastNodePort = receivingDatagram;
-            addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+            // addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
 
-            message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
-                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation);
             for (int i = 0; i < otherStationDatagrams.length; i++) {
-                System.out.println("Node sent to =" + otherStationDatagrams[i]);
+                addCurrentStationToDatagram(path, departureTimes, arrivalTimes, otherStationDatagrams[i]);
+                message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                        numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,
+                        hasReachedFinalStation, homeStation);
+                // System.out.println("Node sent to =" + otherStationDatagrams[i]);
                 writeUDP(message, otherStationDatagrams[i]);
             }
         } else if (!isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 2 - Has not reached required
@@ -288,14 +323,16 @@ public class Station {
             int oldPort = lastNodePort;
             lastNodePort = receivingDatagram;
 
-            addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
+            // addCurrentStationToDatagram(path, departureTimes, arrivalTimes);
 
-            message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt,
-                    path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation);
             for (int i = 0; i < otherStationDatagrams.length; i++) {
                 if (otherStationDatagrams[i] == oldPort) {
                     continue;
                 } else {
+                    addCurrentStationToDatagram(path, departureTimes, arrivalTimes, otherStationDatagrams[i]);
+                    message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                            numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,
+                            hasReachedFinalStation, homeStation);
                     writeUDP(message, otherStationDatagrams[i]);
                 }
             }
@@ -476,10 +513,12 @@ public class Station {
         lastNodePort = receivingDatagram;
         isOutgoing = true;
         homeStation = currentStation;
-        String message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
-                numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation,
-                homeStation);
+
         for (int i = 0; i < otherStationDatagrams.length; i++) {
+            originDepartureTime = determineOriginDepartureTime(otherStationDatagrams[i]);
+            String message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
+                    numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation,
+                    homeStation);
             writeUDP(message, otherStationDatagrams[i]);
         }
     }
@@ -586,7 +625,6 @@ public class Station {
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
             station.run(webPort, stationDatagrams, otherStationDatagrams);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
