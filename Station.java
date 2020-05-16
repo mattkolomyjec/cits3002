@@ -118,7 +118,6 @@ public class Station {
                 timetablePorts[i] = ports.get(currentKey);
             }
         }
-        System.out.println("REACHED B");
     }
 
     /***
@@ -130,7 +129,6 @@ public class Station {
         String temp[] = message.split("\n");
         HashMap<String, Integer> map = new HashMap<String, Integer>();
         map.put(temp[1], Integer.parseInt(temp[2]));
-        System.out.println("REACHED A");
         addPortsToTimetable(map);
     }
 
@@ -181,7 +179,6 @@ public class Station {
         if (current.contains(required)) {
             result = true;
         }
-
         return result;
     }
 
@@ -220,10 +217,8 @@ public class Station {
      */
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes, int portNumber) {
-        System.out.println("REACHED C");
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime now = LocalTime.now();
-        System.out.println(dtf.format(now));
 
         // Problem, not necessarily the fastest route. Could be better to leave later
         // for next stop to be shorter?
@@ -240,7 +235,6 @@ public class Station {
             if (arrivalTimes.size() == 0) {
                 if (time.isAfter(compare) && timetablePorts[i] == portNumber) {
                     index = i;
-                    System.out.println("Index " + i);
                     break;
                 }
             } else if (arrivalTimes.size() > 0) {
@@ -427,11 +421,6 @@ public class Station {
      */
     public void datagramChecks() throws IOException {
         String message;
-        System.out.println("Required Station = " + requiredDestination);
-        System.out.println("Current Station = " + currentStation);
-        for (int i = 0; i < timetablePorts.length; i++) {
-            System.out.println(timetablePorts[i]);
-        }
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
             // to start nod
@@ -546,7 +535,7 @@ public class Station {
         }
 
         System.out.println("Server started on port >> " + webPort);
-        // boolean alreadyWritten = false;
+
         while (true) {
             // wait for events
             int readyCount = selector.select();
@@ -614,11 +603,11 @@ public class Station {
         channel.configureBlocking(false);
         Socket socket = channel.socket();
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
-        System.out.println("Connected to: " + remoteAddr);
+        // System.out.println("Connected to: " + remoteAddr);
 
         channel.register(this.selector, SelectionKey.OP_READ);
 
-        System.out.println("Client... started");
+        // System.out.println("Client... started");
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
         String message = httpHeader + contentType + "\r\n" + date + "<form method='GET'>"
@@ -626,7 +615,6 @@ public class Station {
         buffer.put(message.getBytes());
         buffer.flip();
         channel.write(buffer);
-        // System.out.println(message);
         buffer.clear();
 
     }
@@ -647,7 +635,7 @@ public class Station {
         if (numRead == -1) {
             Socket socket = channel.socket();
             SocketAddress remoteAddr = socket.getRemoteSocketAddress();
-            System.out.println("Connection closed by client: " + remoteAddr);
+            // System.out.println("Connection closed by client: " + remoteAddr);
             channel.close();
             key.cancel();
             return;
@@ -655,7 +643,7 @@ public class Station {
 
         byte[] data = new byte[numRead];
         System.arraycopy(buffer.array(), 0, data, 0, numRead);
-        System.out.println("Got: " + new String(data));
+        // System.out.println("Got: " + new String(data));
         String result = new String(data);
         separateUserInputs(result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
@@ -690,20 +678,18 @@ public class Station {
         byte bytes[] = new byte[limits];
         buffer.get(bytes, 0, limits);
         String msg = new String(bytes);
-        System.out.println("Client at " + remoteAdd + "  sent: " + msg);
+        // System.out.println("Client at " + remoteAdd + " sent: " + msg);
         // channel.send(buffer, remoteAdd);
 
         if (msg.startsWith("#")) {
             if (!checkIfPortIsNotUnique(msg)) {
                 receievedOtherStationNamesCount++;
                 if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
-                    System.out.println("DONE 1");
                     receiveOtherStationNames(msg);
 
                     hasReceivedOtherStationNames = true;
                 } else {
                     receiveOtherStationNames(msg);
-                    System.out.println("DONE 2");
                 }
             }
         } else {
@@ -764,7 +750,6 @@ public class Station {
                 byte[] b = message.getBytes();
                 InetAddress host = InetAddress.getByName("localhost");
                 DatagramPacket request = new DatagramPacket(b, b.length, host, port);
-                // System.out.println("REACHED 4");
                 skt.send(request);
                 skt.close();
 
