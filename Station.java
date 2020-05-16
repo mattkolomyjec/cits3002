@@ -729,11 +729,14 @@ public class Station {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
         String message = /* httpHeader + contentType + */ "\r\n" + "<br>" + date
-                + "<br> <strong> Destination:</strong> " + requiredDestination
-                + "<div> <br> <strong> Route </strong> (Departing Stop | Departure Time | Arrival Time) </div>\n";
+                + "<br> <strong> Destination:</strong> " + requiredDestination + "<br> <strong> Origin:</strong> "
+                + currentStation
+                + "<div> <br> <strong> Route </strong> (Departing Time | Stop | Arrival Time) </div>\n";
 
         for (int i = 0; i < path.size(); i++) {
-            message += "<br>" + path.get(i) + " " + departureTimes.get(i) + " " + arrivalTimes.get(i);
+            message += "<br>" + "Departing at: " + "<strong>" + departureTimes.get(i) + "</strong>" + " " + "To: "
+                    + "<strong>" + path.get(i) + "</strong>" + " " + "Arriving at: " + "<strong>" + arrivalTimes.get(i)
+                    + "</strong>";
         }
         message += "<br>";
         message += "________________________________________";
