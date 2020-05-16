@@ -440,8 +440,4 @@ Mciver_Stn,-31.9517538889,115.8664166670
 23:49,Thornlie_Line,Mciver_Stn_Platform_2,23:50,Claisebrook_Stn
 23:53,Armadale_Line,Mciver_Stn_Platform_1,23:55,Perth_Stn
 23:54,Midland_Line,Mciver_Stn_Platform_3,23:56,Perth_Stn
-24:01,Midland_Line,Mciver_Stn_Platform_4,24:03,Claisebrook_Stn
-24:04,Armadale_Line,Mciver_Stn_Platform_2,24:05,Claisebrook_Stn
-24:08,Thornlie_Line,Mciver_Stn_Platform_1,24:10,Perth_Stn
-24:23,Armadale_Line,Mciver_Stn_Platform_1,24:25,Perth_Stn
-24:24,Midland_Line,Mciver_Stn_Platform_3,24:26,Perth_Stn
+

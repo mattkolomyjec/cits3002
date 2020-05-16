@@ -494,6 +494,7 @@ public class Station {
         channel.socket().bind(new InetSocketAddress(receivingDatagram));
         channel.register(selector, SelectionKey.OP_READ);
 
+        System.out.println("Reading data from adjacent ports!");
         // Send station names until receieved
         while (!hasReceivedOtherStationNames) {
             sendOtherStationNames();
@@ -525,7 +526,7 @@ public class Station {
         }
 
         System.out.println("Server started on port >> " + webPort);
-
+        // boolean alreadyWritten = false;
         while (true) {
             // wait for events
             int readyCount = selector.select();
@@ -564,6 +565,7 @@ public class Station {
                     }
 
                     if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
+                        // alreadyWritten = true;
                         this.writeTCP(key);
                         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
                         // break;

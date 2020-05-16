@@ -863,9 +863,4 @@ Victoria_Park_Transfer_Stn,-31.9682,115.8889
 23:29,935,Victoria_Park_Transfer_Stn_Stand_E,23:31,Adelaide_Tce
 23:31,960,Victoria_Park_Transfer_Stn_Stand_E,23:35,Adelaide_Tce
 23:34,910,Canning_Hwy_Stand_F,23:38,Adelaide_Tce
-23:57,40,Victoria_Park_Transfer_Stn_Stand_E,24:01,Adelaide_Tce
-24:02,960,Victoria_Park_Transfer_Stn_Stand_E,24:05,Adelaide_Tce
-24:22,960,Victoria_Park_Transfer_Stn_Stand_E,24:25,Adelaide_Tce
-24:27,40,Victoria_Park_Transfer_Stn_Stand_E,24:31,Adelaide_Tce
-24:28,380,Victoria_Park_Transfer_Stn_Stand_E,24:32,Adelaide_Tce
-25:27,380,Victoria_Park_Transfer_Stn_Stand_E,25:31,Adelaide_Tce
+
