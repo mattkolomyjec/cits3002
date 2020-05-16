@@ -734,9 +734,9 @@ public class Station {
                 + "<div> <br> <strong> Route </strong> (Departing Time | Stop | Arrival Time) </div>\n";
 
         for (int i = 0; i < path.size(); i++) {
-            message += "<br>" + "Departing at: " + "<strong>" + departureTimes.get(i) + "</strong>" + " " + "To: "
-                    + "<strong>" + path.get(i) + "</strong>" + " " + "Arriving at: " + "<strong>" + arrivalTimes.get(i)
-                    + "</strong>";
+            message += "<br>" + "Departing at: " + "<strong>" + departureTimes.get(i) + "</strong>" + ";" + " " + "To: "
+                    + "<strong>" + path.get(i) + "</strong>" + ";" + " " + "Arriving at: " + "<strong>"
+                    + arrivalTimes.get(i) + "</strong>" + ";";
         }
         message += "<br>";
         message += "________________________________________";
