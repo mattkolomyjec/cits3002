@@ -118,6 +118,7 @@ public class Station {
                 timetablePorts[i] = ports.get(currentKey);
             }
         }
+        System.out.println("REACHED B");
     }
 
     /***
@@ -129,6 +130,7 @@ public class Station {
         String temp[] = message.split("\n");
         HashMap<String, Integer> map = new HashMap<String, Integer>();
         map.put(temp[1], Integer.parseInt(temp[2]));
+        System.out.println("REACHED A");
         addPortsToTimetable(map);
     }
 
@@ -218,20 +220,24 @@ public class Station {
      */
     public void addCurrentStationToDatagram(ArrayList<String> path, ArrayList<String> departureTimes,
             ArrayList<String> arrivalTimes, int portNumber) {
+        System.out.println("REACHED C");
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm");
         LocalTime now = LocalTime.now();
         System.out.println(dtf.format(now));
 
         // Problem, not necessarily the fastest route. Could be better to leave later
         // for next stop to be shorter?
-
         path.add(currentStation);
         int index = 0;
         for (int i = 0; i < timetableDepartureTime.size(); i++) {
             String timetableString = timetableDepartureTime.get(i);
             LocalTime time = LocalTime.parse(timetableString, dtf);
 
-            if (time.isAfter(now) && timetablePorts[i] == portNumber) {
+            LocalTime currentTime = LocalTime.now();
+            String t = currentTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+            LocalTime compare = LocalTime.parse(t);
+
+            if (time.isAfter(compare) && timetablePorts[i] == portNumber) {
                 index = i;
                 System.out.println("Index " + i);
                 break;
@@ -349,12 +355,12 @@ public class Station {
      */
     public void readDatagramIn(String message) {
         reset();
-        try {
-            readTimetableIn();
-            // COME BACK!!!!!!
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // try {
+        // readTimetableIn();
+        // COME BACK!!!!!!
+        // } catch (IOException e) {
+        // e.printStackTrace();
+        // }
         String temp[] = message.split(" ");
         if (temp[0].contains("Outgoing")) {
             isOutgoing = true;
@@ -412,6 +418,9 @@ public class Station {
         String message;
         System.out.println("Required Station = " + requiredDestination);
         System.out.println("Current Station = " + currentStation);
+        for (int i = 0; i < timetablePorts.length; i++) {
+            System.out.println(timetablePorts[i]);
+        }
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
             // to start nod
@@ -673,25 +682,22 @@ public class Station {
         System.out.println("Client at " + remoteAdd + "  sent: " + msg);
         // channel.send(buffer, remoteAdd);
 
-        boolean readMessageIn = false;
-        if (msg.startsWith("#") /* && hasReceivedOtherStationNames */) {
+        if (msg.startsWith("#")) {
             if (!checkIfPortIsNotUnique(msg)) {
                 receievedOtherStationNamesCount++;
                 if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
+                    System.out.println("DONE 1");
                     receiveOtherStationNames(msg);
+
                     hasReceivedOtherStationNames = true;
                 } else {
                     receiveOtherStationNames(msg);
+                    System.out.println("DONE 2");
                 }
             }
         } else {
-            if (msg != null && !datagramHasNull(msg)) {
+            if (msg != null && !datagramHasNull(msg) && hasReceivedOtherStationNames)
                 readDatagramIn(msg);
-                readMessageIn = true;
-            }
-        }
-        // System.out.println(msg);
-        if (readMessageIn) {
             if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                 channel.register(this.selector, SelectionKey.OP_WRITE);
             } else {
