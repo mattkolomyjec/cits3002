@@ -237,14 +237,25 @@ public class Station {
             String t = currentTime.format(DateTimeFormatter.ofPattern("HH:mm"));
             LocalTime compare = LocalTime.parse(t);
 
-            if (time.isAfter(compare) && timetablePorts[i] == portNumber) {
-                index = i;
-                System.out.println("Index " + i);
-                break;
+            if (arrivalTimes.size() == 0) {
+                if (time.isAfter(compare) && timetablePorts[i] == portNumber) {
+                    index = i;
+                    System.out.println("Index " + i);
+                    break;
+                }
+            } else if (arrivalTimes.size() > 0) {
+                String lastArrivalTime = arrivalTimes.get(arrivalTimes.size() - 1);
+                LocalTime nextTime = LocalTime.parse(lastArrivalTime);
+                if (time.isAfter(nextTime) && timetablePorts[i] == portNumber) {
+                    index = i;
+                    break;
+                }
             }
+
         }
         departureTimes.add(timetableDepartureTime.get(index));
         arrivalTimes.add(timetableArrivalTime.get(index));
+
     }
 
     /***
