@@ -58,6 +58,7 @@ public class Station {
     String datagramClientMessage;
     boolean hasReceivedOtherStationNames = false;
     ArrayList<Integer> otherStationPorts = new ArrayList<Integer>();
+    boolean alreadyWritten = false;
 
     /**
      * A method to create an instance of the Station object
@@ -133,6 +134,12 @@ public class Station {
         addPortsToTimetable(map);
     }
 
+    /***
+     * Checks if a port and station name has already been receieved from adjacent
+     * ports in the boot up sequence
+     * 
+     * @param message the UDP message read in
+     */
     public void removePortIfCovered(String message) {
         // boolean result = false;
         String temp[] = message.split("\n");
@@ -565,20 +572,14 @@ public class Station {
                         channel.register(this.selector, SelectionKey.OP_READ);
                         break;
                     }
-
-                    if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
-                        // alreadyWritten = true;
+                    if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)
+                            && !alreadyWritten) {
+                        alreadyWritten = true;
                         this.writeTCP(key);
                         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
-                        // break;
-                        // break;
-
+                    } else if (alreadyWritten) {
+                        serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
                     }
-                    // channel.register(this.selector, SelectionKey.OP_READ);
-                    // serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
-                    // break;
-
-                    // break;
                 }
             }
         }
