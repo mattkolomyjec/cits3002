@@ -57,8 +57,7 @@ public class Station {
     public static final String contentType = "Content-Type: text/html\r\n";
     String datagramClientMessage;
     boolean hasReceivedOtherStationNames = false;
-    int receievedOtherStationNamesCount = 0;
-    int[] receievedOtherStationPortsUnique;
+    ArrayList<Integer> otherStationPorts = new ArrayList<Integer>();
 
     /**
      * A method to create an instance of the Station object
@@ -74,7 +73,9 @@ public class Station {
         this.currentStation = currentStation;
         this.receivingDatagram = receivingDatagram;
         this.otherStationDatagrams = otherStationDatagrams;
-        receievedOtherStationPortsUnique = new int[otherStationDatagrams.length];
+        for (int i = 0; i < otherStationDatagrams.length; i++) {
+            otherStationPorts.add(otherStationDatagrams[i]);
+        }
     }
 
     /***
@@ -132,25 +133,17 @@ public class Station {
         addPortsToTimetable(map);
     }
 
-    /***
-     * A method to determine if adjacent station port number has already been read
-     * in
-     * 
-     * @param message
-     * @return result indicating where the read in is unique (false) or not unique
-     *         (true)
-     */
-    public boolean checkIfPortIsNotUnique(String message) {
-        boolean result = false;
+    public void removePortIfCovered(String message) {
+        // boolean result = false;
         String temp[] = message.split("\n");
         int portInReference = Integer.parseInt(temp[2]);
-        for (int i = 0; i < receievedOtherStationPortsUnique.length; i++) {
-            if (receievedOtherStationPortsUnique[i] == portInReference) {
-                result = true;
+        for (int i = 0; i < otherStationPorts.size(); i++) {
+            if (otherStationPorts.get(i) == portInReference) {
+                otherStationPorts.remove(i);
+                // result = true;
                 break;
             }
         }
-        return result;
     }
 
     /***
@@ -629,13 +622,18 @@ public class Station {
 
         SocketChannel channel = (SocketChannel) key.channel();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
+        // int numRead = -1;
         int numRead = -1;
         numRead = channel.read(buffer);
+
+        // while (numRead == -1) {
+        // continue;
+        // }
 
         if (numRead == -1) {
             Socket socket = channel.socket();
             SocketAddress remoteAddr = socket.getRemoteSocketAddress();
-            // System.out.println("Connection closed by client: " + remoteAddr);
+            System.out.println("Connection closed by client: " + remoteAddr);
             channel.close();
             key.cancel();
             return;
@@ -682,16 +680,14 @@ public class Station {
         // channel.send(buffer, remoteAdd);
 
         if (msg.startsWith("#")) {
-            if (!checkIfPortIsNotUnique(msg)) {
-                receievedOtherStationNamesCount++;
-                if (receievedOtherStationNamesCount >= otherStationDatagrams.length) {
-                    receiveOtherStationNames(msg);
-
-                    hasReceivedOtherStationNames = true;
-                } else {
-                    receiveOtherStationNames(msg);
-                }
+            removePortIfCovered(msg);
+            if (otherStationPorts.isEmpty()) {
+                receiveOtherStationNames(msg);
+                hasReceivedOtherStationNames = true;
+            } else {
+                receiveOtherStationNames(msg);
             }
+
         } else {
             if (msg != null && !datagramHasNull(msg) && hasReceivedOtherStationNames)
                 readDatagramIn(msg);

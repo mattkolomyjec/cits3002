@@ -19,49 +19,67 @@ int numberStationsStoppedAt;
 vector<string> path;
 vector<string> departureTimes;
 vector<string> arrivalTimes;
+int lastNodePort;
+bool hasReachedFinalStation;
+string homeStation;
 
 // Station  Variables
 string currentStation;
+int receivingDatagram;
+int webPort;
+vector<int> otherStationDatagrams;
 string latitude;
 string longitude;
-vector<string> destinations;
-int receivingDatagram;
-vector<int> otherStationDatagrams;
-//int otherStationDatagrams[];
+
+// Timetable Variables
+vector<string> timetableDepatureTime;
+vector<string> timetableLine;
+vector<string> timetablePlatform;
+vector<string> timetableArrivalTime;
+vector<string> timetableDestinations;
+int timetablePorts[];
 
 // Other Variables
+// Selector selector;
+string httpHeader = "HTTP/1.1 200 OK\r\n";
+string contentType = "Content-Type: text/html\r\n";
 string datagramClientMessage;
+bool hasReceivedOtherStationNames = false;
+int receievedOtherStationNamesCount = 0;
+int receievedOtherStationPortsUnique[];
 
 // ###############################################################################
 
 /***
- * A method to read the timetable data in from a text file and store it in an ArrayList
- */
-void readTimetableIn()
+     * A method to read the Transperth timetable data in
+     * 
+     * @throws FileNotFoundException if the file cannot be located
+     */
+void readTimetableIn() throws FileNotFoundException
 {
-    /// FIGURE OUT CPP
-}
+    string chosenStation = "tt-" + currentStation;
+    File file = new File("google_transit/" + chosenStation);
+    Scanner sc = new Scanner(file);
 
-/***
-* A method to check if the required destination is directly connected to the
-* current station
-* 
-* @return boolean indicataing if there is a direct connection to the required
-*         destination
-*/
-bool hasDirectConnection()
-{
-    bool result = false;
-    for (int i = 0; i < destinations.size(); i++)
+    string temp[] = ((sc.nextLine()).split(","));
+    latitude = temp[1];
+    longitude = temp[2];
+
+    while (sc.hasNextLine())
     {
-        if ((destinations.at(i)).find(requiredDestination))
+        string tempRoutes[] = ((sc.nextLine()).split(","));
+        for (int i = 0; i < tempRoutes.length - 4; i += 4)
         {
-            result = true;
-            break;
+            timetableDepartureTime.add(tempRoutes[i]);
+            timetableLine.add(tempRoutes[i + 1]);
+            timetablePlatform.add(tempRoutes[i + 2]);
+            timetableArrivalTime.add(tempRoutes[i + 3]);
+            timetableDestinations.add(tempRoutes[i + 4]);
         }
     }
-    return result;
+    timetablePorts = new int[timetableDestinations.size()];
 }
+
 /**
  * Helper method to trim white space from a string
  */
