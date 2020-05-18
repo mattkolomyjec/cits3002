@@ -200,7 +200,6 @@ public class Station {
                 endIndex = i - 1;
             }
         }
-
         requiredDestination = body.substring(startIndex, endIndex);
         requiredDestination.trim();
     }
@@ -599,8 +598,6 @@ public class Station {
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
         // System.out.println("Connected to: " + remoteAddr);
 
-        channel.register(this.selector, SelectionKey.OP_READ);
-
         // System.out.println("Client... started");
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
@@ -610,6 +607,8 @@ public class Station {
         buffer.flip();
         channel.write(buffer);
         buffer.clear();
+        // channel.register(this.selector, SelectionKey.OP_ACCEPT);
+        channel.register(this.selector, SelectionKey.OP_READ);
 
     }
 

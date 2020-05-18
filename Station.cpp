@@ -8,6 +8,9 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <fstream>
+#include <map>
+#include <time.h>
 
 using namespace std;
 
@@ -27,7 +30,7 @@ string homeStation;
 string currentStation;
 int receivingDatagram;
 int webPort;
-vector<int> otherStationDatagrams;
+// int otherStationDatagrams[];
 string latitude;
 string longitude;
 
@@ -37,7 +40,7 @@ vector<string> timetableLine;
 vector<string> timetablePlatform;
 vector<string> timetableArrivalTime;
 vector<string> timetableDestinations;
-int timetablePorts[];
+//int timetablePorts[];
 
 // Other Variables
 // Selector selector;
@@ -45,44 +48,117 @@ string httpHeader = "HTTP/1.1 200 OK\r\n";
 string contentType = "Content-Type: text/html\r\n";
 string datagramClientMessage;
 bool hasReceivedOtherStationNames = false;
-int receievedOtherStationNamesCount = 0;
-int receievedOtherStationPortsUnique[];
+vector<int> otherStationPorts;
+bool alreadyWritten = false;
 
 // ###############################################################################
 
-/***
-     * A method to read the Transperth timetable data in
-     * 
-     * @throws FileNotFoundException if the file cannot be located
-     */
-void readTimetableIn() throws FileNotFoundException
+vector<string> explode(const string &str, const char &ch)
 {
-    string chosenStation = "tt-" + currentStation;
-    File file = new File("google_transit/" + chosenStation);
-    Scanner sc = new Scanner(file);
+    string next;
+    vector<string> result;
 
-    string temp[] = ((sc.nextLine()).split(","));
-    latitude = temp[1];
-    longitude = temp[2];
-
-    while (sc.hasNextLine())
+    // For each character in the string
+    for (string::const_iterator it = str.begin(); it != str.end(); it++)
     {
-        string tempRoutes[] = ((sc.nextLine()).split(","));
-        for (int i = 0; i < tempRoutes.length - 4; i += 4)
+        // If we've hit the terminal character
+        if (*it == ch)
         {
-            timetableDepartureTime.add(tempRoutes[i]);
-            timetableLine.add(tempRoutes[i + 1]);
-            timetablePlatform.add(tempRoutes[i + 2]);
-            timetableArrivalTime.add(tempRoutes[i + 3]);
-            timetableDestinations.add(tempRoutes[i + 4]);
+            // If we have some characters accumulated
+            if (!next.empty())
+            {
+                // Add them to the result vector
+                result.push_back(next);
+                next.clear();
+            }
+        }
+        else
+        {
+            // Accumulate the next character into the sequence
+            next += *it;
         }
     }
-    timetablePorts = new int[timetableDestinations.size()];
+    if (!next.empty())
+        result.push_back(next);
+    return result;
 }
 
-/**
- * Helper method to trim white space from a string
- */
+void readTimetableIn()
+{
+    string chosenStation = "tt-" + currentStation;
+    string line;
+    ifstream timetable;
+    timetable.open("google_transit/" + chosenStation);
+
+    if (!timetable)
+    {
+        cerr << "Unable to open timetable file";
+        exit(1);
+    }
+
+    bool firstLineRead = false;
+
+    while (getline(timetable, line))
+    {
+        vector<string> result = explode(line, ',');
+        if (!firstLineRead)
+        {
+            latitude = result[1];
+            longitude = result[2];
+            firstLineRead = true;
+        }
+        else
+        {
+            result = explode(line, ',');
+            timetableDepatureTime.push_back(result.at(0));
+            timetableLine.push_back(result.at(1));
+            timetablePlatform.push_back(result.at(2));
+            timetableArrivalTime.push_back(result.at(3));
+            timetableDestinations.push_back(result.at(4));
+        }
+    }
+    // JAVA timetablePorts initalised here
+}
+/*
+void addPortsToTimetable(map<string, int> ports)
+{
+    for (int i = 0; i < timetableDestinations.size(); i++)
+    {
+        string currentKey = timetableDestinations.at(i);
+        if (ports.find(currentKey))
+        {
+            timetablePorts[i] = ports.at(currentKey);
+        }
+    }
+}
+*/
+
+void receiveOtherStationNames(string message)
+{
+    // TODO
+}
+
+void removePortIfCovered(string message)
+{
+    vector<string> result = explode(message, '\n');
+    int portInReference = stoi(result.at(2));
+    for (int i = 0; i < otherStationPorts.size(); i++)
+    {
+        if (otherStationPorts.at(i) == portInReference)
+        {
+
+            // otherStationPorts.erase(i);
+            cout << otherStationPorts.at(i);
+            break;
+        }
+    }
+}
+
+void sendOtherStationNames()
+{
+    // TODO
+}
+
 string trim(const string &str)
 {
     size_t first = str.find_first_not_of(' ');
@@ -94,11 +170,6 @@ string trim(const string &str)
     return str.substr(first, (last - first + 1));
 }
 
-/**
-     * A method to check whether the current station is the final destination
-     * 
-     * @return boolean indicating whether the current station is the final station
-     */
 bool isFinalStation()
 {
     bool result = false;
@@ -111,44 +182,43 @@ bool isFinalStation()
     return result;
 }
 
-/***
-     * A method to extract the required destination from the body parsed in the
-     * following format: origin={GIVEN}&destination={EXTRACT}
-     * 
-     * @param body
-     */
-/*
 void separateUserInputs(string body)
 {
-    //string temp[] = body.split("(?!^)");
-    cout << body[1];
+    vector<string> result = explode(body, '(?!^)');
+    int startIndex = 0;
     int endIndex = 0;
-    for (int i = 0; i < body.length; i++)
+    for (int i = 1; i < result.size(); i++)
     {
-        if (body[i].find("="))
+        if (result.at(i).find("=") && result.at(i - 1).find("o"))
         {
-            endIndex = i + 1;
+            startIndex = i + 1;
+        }
+        if (result.at(i).find("H") && result.at(i).find(" "))
+        {
+            endIndex = i - 1;
         }
     }
-    requiredDestination = body.substr(endIndex);
+    requiredDestination = body.substr(startIndex, endIndex);
+    trim(requiredDestination);
+}
+
+/*
+void addCurrentStationToDatagram(vector<string> path, vector<string> departureTimes, vector<string> arrivalTimes, int portNumber)
+{
+    time_t now;
+
+    path.push_back(currentStation);
+    int index = 0;
+    for (int i = 0; i < timetableDepatureTime.size(); i++)
+    {
+        string timetableString = timetableDepatureTime.at(i);
+    }
 }
 */
 
-// ###############################################################################
-/**
-     * A method to add the current station to the datagram before sending it onto
-     * the next node
-     * 
-     * @param path
-     * @param departureTimes
-     * @param arrivalTimes
-     */
-void addCurrentStationToDatagram(vector<string> path, vector<string> departureTimes,
-                                 vector<string> arrivalTimes)
+string determineOriginDepartureTime(int port)
 {
-    path.insert(path.end(), currentStation);
-    departureTimes.insert(path.end(), "TEST");
-    arrivalTimes.insert(path.end(), "TEST");
+    // TODO
 }
 
 /***
@@ -164,7 +234,7 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
      */
 string constructDatagram(bool isOutgoing, string requiredDestination, string originDepartureTime,
                          int numberStationsStoppedAt, vector<string> path, vector<string> departureTimes,
-                         vector<string> arrivalTimes)
+                         vector<string> arrivalTimes, int lastNodePort, bool hasReachedFinalDestination, string homeStation)
 {
     string result;
     if (isOutgoing)
@@ -175,7 +245,7 @@ string constructDatagram(bool isOutgoing, string requiredDestination, string ori
     {
         result = "Incoming \n";
     }
-    result += requiredDestination + " " + originDepartureTime + " " + to_string(numberStationsStoppedAt) + " \n";
+    result += requiredDestination + " " + originDepartureTime + " " + to_string(numberStationsStoppedAt) + " " + to_string(lastNodePort) + " " + to_string(hasReachedFinalDestination) + " " + homeStation + " \n";
     for (int i = 0; i < path.size(); i++)
     {
         result += path.at(i) + " " + departureTimes.at(i) + " " + arrivalTimes.at(i) + " \n";
@@ -183,9 +253,6 @@ string constructDatagram(bool isOutgoing, string requiredDestination, string ori
     return result;
 }
 
-/***
-     * A method to reset the variables that hold the current message in hand
-     */
 void reset()
 {
     isOutgoing = false;
@@ -197,73 +264,29 @@ void reset()
     arrivalTimes.clear();
 }
 
-/***
-     * A method to read a datagram sent from another node in.
-     * 
-     * @param message the datagram sent in
-     */
-/*
-void readDatagramIn(string message)
-{
-    reset();
-    string temp[] = message.split(" ");
-    if (temp[0].contains("Outgoing"))
-    {
-        isOutgoing = true;
-    }
-    else
-    {
-        isOutgoing = false;
-    }
-    requiredDestination = temp[1];
-    originDepartureTime = temp[2];
-    numberStationsStoppedAt = atoi(temp[3]);
-
-    int pathIndex = 4;
-    int departureIndex = 5;
-    int arrivalIndex = 6;
-    for (int i = 0; i < numberStationsStoppedAt; i++)
-    {
-        path.insert(path.end(), temp[pathIndex]);
-        pathIndex += 3;
-        departureTimes.insert(departureTimes.end(), temp[departureIndex]);
-        departureIndex += 3;
-        arrivalTimes.insert(arrivalTimes.end(), temp[arrivalIndex]);
-        arrivalIndex += 3;
-    }
-}
-*/
-/**
-     * A method to calculate the total journey time (in minutes) given departure and
-     * arrival times
-     * 
-     * @param departureTime
-     * @param arrivalTime
-     * @return
-     */
-
-int calculateJourneyTime(vector<string> departureTime, vector<string> arrivalTime)
-{
-    return 0;
-}
-
 // ###############################################################################
 
 int main(int argCount, const char *args[])
 {
-    string origin = args[0]; // Something wrong on this line with the pointer
-    int webPort = atoi(args[1]);
-    int stationDatagrams = atoi(args[2]);
+    currentStation = args[1]; // Something wrong on this line with the pointer
+    webPort = atoi(args[2]);
+    receivingDatagram = atoi(args[3]);
 
-    int otherStationDatagrams[argCount - 3];
-    int otherIndex = 3;
-    for (int i = 0; i < argCount; i++)
+    int otherStationDatagrams[argCount - 5];
+
+    int otherIndex = 4;
+
+    for (int i = 0; i <= argCount - 5; i++)
     {
         otherStationDatagrams[i] = atoi(args[otherIndex]);
         otherIndex++;
     }
 
-    cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
+    string message = "#\ncottesloe-stn\n4005";
+    removePortIfCovered(message);
+    readTimetableIn();
+
+    //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
 }
 
