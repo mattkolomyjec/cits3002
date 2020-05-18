@@ -273,10 +273,6 @@ public class Station {
         return originDepartureTime;
     }
 
-    public void fastestTime() {
-
-    }
-
     /***
      * A method to construct a datgram message in the established protocol format
      * 
