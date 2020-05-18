@@ -35,7 +35,7 @@ string homeStation;
 string currentStation;
 int receivingDatagram;
 int webPort;
-// int otherStationDatagrams[];
+vector<int> otherStationDatagrams;
 string latitude;
 string longitude;
 
@@ -155,7 +155,7 @@ void removePortIfCovered(string message)
         if (otherStationPorts.at(i) == portInReference)
         {
 
-            otherStationPorts.erase(i);
+            // otherStationPorts.erase(i);
             cout << otherStationPorts.at(i);
             break;
         }
@@ -173,9 +173,9 @@ void sendOtherStationNames()
     message += currentStation;
     message += "\n";
     message += receivingDatagram;
-    for (int i = 0; i < otherStationPorts.size(); i++)
+    for (int i = 0; i < otherStationDatagrams.size(); i++)
     {
-        writeUDP(message, otherStationPorts.at(i));
+        writeUDP(message, otherStationDatagrams.at(i));
     }
 }
 
@@ -362,13 +362,13 @@ void datagramChecks()
 
         lastNodePort = receivingDatagram;
 
-        for (int i = 0; i < otherStationPorts.size(); i++)
+        for (int i = 0; i < otherStationDatagrams.size(); i++)
         {
             // TODO addCurrentStationToDatagram writeUDP
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
                                         numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,
                                         hasReachedFinalStation, homeStation);
-            writeUDP(message, otherStationPorts.at(i));
+            writeUDP(message, otherStationDatagrams.at(i));
         }
     }
     else if (!isFinalStation() && isOutgoing && !hasReachedFinalStation)
@@ -377,9 +377,9 @@ void datagramChecks()
         int oldPort = lastNodePort;
         lastNodePort = receivingDatagram;
 
-        for (int i = 0; i < otherStationPorts.size(); i++)
+        for (int i = 0; i < otherStationDatagrams.size(); i++)
         {
-            if (otherStationPorts.at(i) == oldPort)
+            if (otherStationDatagrams.at(i) == oldPort)
             {
                 continue;
             }
@@ -389,7 +389,7 @@ void datagramChecks()
                 message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
                                             numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,
                                             hasReachedFinalStation, homeStation);
-                writeUDP(message, otherStationPorts.at(i));
+                writeUDP(message, otherStationDatagrams.at(i));
             }
         }
     }
@@ -400,15 +400,15 @@ void datagramChecks()
         message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
                                     numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,
                                     hasReachedFinalStation, homeStation);
-        for (int i = 0; i < otherStationPorts.size(); i++)
+        for (int i = 0; i < otherStationDatagrams.size(); i++)
         {
-            if (otherStationPorts.at(i) == oldPort)
+            if (otherStationDatagrams.at(i) == oldPort)
             {
                 continue;
             }
             else
             {
-                writeUDP(message, otherStationPorts.at(i));
+                writeUDP(message, otherStationDatagrams.at(i));
             }
         }
     }
@@ -425,7 +425,7 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-void run(int webPort, int receivingDatagram, vector<int> otherStationPorts)
+void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
 {
     /*
     fd_set master;   // master file descriptor list
@@ -596,20 +596,17 @@ int main(int argCount, const char *args[])
     webPort = atoi(args[2]);
     receivingDatagram = atoi(args[3]);
 
-    int otherStationDatagrams[argCount - 5];
-
     int otherIndex = 4;
-
     for (int i = 0; i <= argCount - 5; i++)
     {
-        otherStationDatagrams[i] = atoi(args[otherIndex]);
+        otherStationDatagrams.push_back(atoi(args[otherIndex]));
         otherIndex++;
     }
 
     string message = "#\nCottesloe_Stn\n4005";
-    // removePortIfCovered(message);
+    removePortIfCovered(message);
     readTimetableIn();
-    receiveOtherStationNames(message);
+    // receiveOtherStationNames(message);
     //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
 }
