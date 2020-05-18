@@ -57,28 +57,26 @@ bool hasReceivedOtherStationNames = false;
 vector<int> otherStationPorts;
 bool alreadyWritten = false;
 
+/**
+ * A method to split a string into an array by a delimiter
+ * */
 vector<string> explode(const string &str, const char &ch)
 {
     string next;
     vector<string> result;
 
-    // For each character in the string
     for (string::const_iterator it = str.begin(); it != str.end(); it++)
     {
-        // If we've hit the terminal character
         if (*it == ch)
         {
-            // If we have some characters accumulated
             if (!next.empty())
             {
-                // Add them to the result vector
                 result.push_back(next);
                 next.clear();
             }
         }
         else
         {
-            // Accumulate the next character into the sequence
             next += *it;
         }
     }
@@ -86,7 +84,10 @@ vector<string> explode(const string &str, const char &ch)
         result.push_back(next);
     return result;
 }
-
+/***
+     * A method to read the Transperth timetable data in
+     * 
+     * */
 void readTimetableIn()
 {
     string chosenStation = "tt-" + currentStation;
@@ -129,7 +130,7 @@ void addPortsToTimetable(map<string, int> ports)
     for (int i = 0; i < timetableDestinations.size(); i++)
     {
         string currentKey = timetableDestinations.at(i);
-        if (ports.find(currentKey)
+        if (ports.at(currentKey))
         {
             timetablePorts[i] = ports.at(currentKey);
         }
@@ -161,9 +162,17 @@ void removePortIfCovered(string message)
     }
 }
 
+void writeUDP(string message, int port)
+{
+    // TODO
+}
+
 void sendOtherStationNames()
 {
-    string message = "#" + "\n" + currentStation + "\n" + receivingDatagram;
+    string message = "#\n";
+    message += currentStation;
+    message += "\n";
+    message += receivingDatagram;
     for (int i = 0; i < otherStationPorts.size(); i++)
     {
         writeUDP(message, otherStationPorts.at(i));
@@ -193,6 +202,7 @@ bool isFinalStation()
     return result;
 }
 
+/*
 void separateUserInputs(string body)
 {
     vector<string> result = explode(body, '(?!^)');
@@ -212,6 +222,7 @@ void separateUserInputs(string body)
     requiredDestination = body.substr(startIndex, endIndex);
     trim(requiredDestination);
 }
+*/
 
 /*
 void addCurrentStationToDatagram(vector<string> path, vector<string> departureTimes, vector<string> arrivalTimes, int portNumber)
@@ -227,22 +238,12 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
 }
 */
 
+/*
 string determineOriginDepartureTime(int port)
 {
     // TODO
 }
-
-/***
-     * Constructs a datagram to send based on the protcol created. The stops and
-     * arrivalTime ArrayLists are indexed the same.
-     * 
-     * @param isOutgoing
-     * @param requiredDestination
-     * @param originDepartureTime
-     * @param stops
-     * @param departureTimes
-     * @return result a string ready to be sent
-     */
+*/
 string constructDatagram(bool isOutgoing, string requiredDestination, string originDepartureTime,
                          int numberStationsStoppedAt, vector<string> path, vector<string> departureTimes,
                          vector<string> arrivalTimes, int lastNodePort, bool hasReachedFinalDestination, string homeStation)
@@ -426,6 +427,7 @@ void *get_in_addr(struct sockaddr *sa)
 
 void run(int webPort, int receivingDatagram, vector<int> otherStationPorts)
 {
+    /*
     fd_set master;   // master file descriptor list
     fd_set read_fds; // temp file descriptor list for select()
     int fdmax;       // maximum file descriptor number
@@ -585,10 +587,7 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationPorts)
         }         // END looping through file descriptors
     }             // END for(;;)--and you thought it would never end!
 }
-
-void writeUDP(string message, int port)
-{
-    // TODO
+*/
 }
 
 int main(int argCount, const char *args[])
@@ -607,18 +606,10 @@ int main(int argCount, const char *args[])
         otherIndex++;
     }
 
-    string message = "#\ncottesloe-stn\n4005";
-    removePortIfCovered(message);
+    string message = "#\nCottesloe_Stn\n4005";
+    // removePortIfCovered(message);
     readTimetableIn();
-
+    receiveOtherStationNames(message);
     //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
 }
-
-// Protocol
-
-// Outgoing/Incoming (whether it has reached final destination yet or not)
-// Destination, origin depature time, number of stations stopped at
-// Station stopped at, Departure Time, Arrival Time
-// Station stopped at, Departure Time, Arrival Time
-// Station stopped at, Departure Time, Arrival Time
