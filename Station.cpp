@@ -16,6 +16,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <chrono>
+#include <ctime>
 
 using namespace std;
 
@@ -46,7 +48,6 @@ vector<string> timetablePlatform;
 vector<string> timetableArrivalTime;
 vector<string> timetableDestinations;
 vector<int> timetablePorts;
-//int timetablePorts[];
 
 // Other Variables
 // Selector selector;
@@ -155,7 +156,7 @@ void removePortIfCovered(string message)
         if (otherStationPorts.at(i) == portInReference)
         {
 
-            // otherStationPorts.erase(i);
+            otherStationPorts.erase(otherStationPorts.begin() + i);
             cout << otherStationPorts.at(i);
             break;
         }
@@ -201,42 +202,88 @@ bool isFinalStation()
     }
     return result;
 }
-
+//string a = "hello";
+//cout << a[1];
 /*
 void separateUserInputs(string body)
 {
-    vector<string> result = explode(body, '(?!^)');
     int startIndex = 0;
     int endIndex = 0;
-    for (int i = 1; i < result.size(); i++)
+    for (int i = 1; i < body.size(); i++)
     {
-        if (result.at(i).find("=") && result.at(i - 1).find("o"))
+        // string first(1, body[i]);
+        string second(1, body[i - 1]);
+        bool foundStart = false;
+        bool foundEnd = false;
+        cout << body[0];
+        char first = body[i];
+        // cout << first;
+        // is not splitting correctly
+
+        if (second.compare("o") && !foundStart)
         {
+            //cout << "Reached";
             startIndex = i + 1;
+            foundStart = true;
         }
-        if (result.at(i).find("H") && result.at(i).find(" "))
+        if (second.compare(" ") && !foundEnd)
         {
+            // cout << "Reached";
             endIndex = i - 1;
+            foundEnd = true;
         }
     }
+    cout << startIndex;
+    //cout << endIndex;
     requiredDestination = body.substr(startIndex, endIndex);
     trim(requiredDestination);
+    //cout << requiredDestination;
 }
 */
 
-/*
+const string currentDateTime()
+{
+    time_t now = time(0);
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&now);
+
+    strftime(buf, sizeof(buf), "%R", &tstruct);
+
+    return buf;
+}
+
 void addCurrentStationToDatagram(vector<string> path, vector<string> departureTimes, vector<string> arrivalTimes, int portNumber)
 {
-    time_t now;
-
-    path.push_back(currentStation);
     int index = 0;
+
+    string time = currentDateTime();
+    const char *nowTime = time.c_str();
+    struct tm tm;
+    time_t convertedTime = strptime(nowTime, "%H:%M", &tm);
+
     for (int i = 0; i < timetableDepatureTime.size(); i++)
     {
-        string timetableString = timetableDepatureTime.at(i);
+        if (arrivalTimes.size() == 0)
+        {
+        }
+        else if (arrivalTimes.size() > 0)
+        {
+            string lastArrivalTime = arrivalTimes.at(arrivalTimes.size() - 1);
+            const char *cstr = lastArrivalTime.c_str();
+            struct tm tm;
+            strptime(cstr, "%H:%M", &tm);
+            time_t t = mktime(&tm); // t is now your desired time_t
+            double comparison = difftime(t, convertedTime);
+
+            if (comparison >= 0.00 && timetablePorts.at(i) == portNumber)
+            {
+                index = i;
+                break;
+            }
+        }
     }
 }
-*/
 
 /*
 string determineOriginDepartureTime(int port)
@@ -606,6 +653,8 @@ int main(int argCount, const char *args[])
     string message = "#\nCottesloe_Stn\n4005";
     removePortIfCovered(message);
     readTimetableIn();
+    addCurrentStationToDatagram(path, departureTimes, arrivalTimes, receivingDatagram);
+    //separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
     // receiveOtherStationNames(message);
     //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
