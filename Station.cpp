@@ -18,6 +18,31 @@
 #include <sys/types.h>
 #include <chrono>
 #include <ctime>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <errno.h>
+#include <arpa/inet.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 using namespace std;
 
@@ -162,9 +187,81 @@ void removePortIfCovered(string message)
     }
 }
 
-void writeUDP(string message, int port)
+bool writeUDP(string message, int port)
 {
-    // TODO
+    sockaddr_in servaddr;
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0)
+    {
+        perror("cannot open socket");
+        return false;
+    }
+
+    bzero(&servaddr, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_port = htons(port);
+
+    char cstr[message.size() + 1];
+    strcpy(cstr, message.c_str());
+
+    if (sendto(fd, cstr, strlen(cstr) + 1, 0, // +1 to include terminator
+               (sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    {
+        perror("cannot send message");
+        close(fd);
+        return false;
+    }
+    close(fd);
+    return true;
+}
+#define h_addr h_addr_list[0]
+void accept()
+{
+
+    string ip = "127.0.0.1";
+    const char *domain = ip.c_str();
+    //char *path = strchr(domain, '/');
+    //*path++ = '\0';
+    //printf("host: %s; path: %s\n", domain, path);
+
+    int sock, bytes_recieved;
+    char send_data[1024], recv_data[9999];
+    struct sockaddr_in server_addr;
+    struct hostent *he;
+
+    he = gethostbyname(domain);
+    if (he == NULL)
+    {
+        herror("gethostbyname");
+        exit(1);
+    }
+
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+        perror("Socket");
+        exit(1);
+    }
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(webPort);
+    server_addr.sin_addr = *((struct in_addr *)he->h_addr);
+    bzero(&(server_addr.sin_zero), 8);
+    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
+    {
+        perror("Connect");
+        exit(1);
+    }
+    string message = httpHeader + contentType + "\r\n" + "<form method='GET'>" + "<input name='to' type='text'/>" + "<input type='submit'/>" + "</form>";
+    const char *cmessage = message.c_str();
+    snprintf(send_data, sizeof(send_data), "%s", cmessage);
+    //printf("%s\n", send_data);
+    send(sock, send_data, strlen(send_data), 0);
+    printf("Data sended.\n");
+    bytes_recieved = recv(sock, recv_data, 9999, 0);
+    recv_data[bytes_recieved] = '\0';
+    close(sock);
+    printf("Data reveieved.\n");
+    printf("%s\n", recv_data);
 }
 
 void sendOtherStationNames()
@@ -206,16 +303,10 @@ vector<char> split(const string &str)
 {
     vector<char> result;
 
-    // For each character in the string
     for (char ch : str)
     {
-        // Copy only alphabetical characters and numeric digits
-        //  if (isalnum(ch))
-        //     {
         result.push_back(ch);
-        //  }
     }
-
     return result;
 }
 
@@ -266,6 +357,7 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
     {
         if (arrivalTimes.size() == 0)
         {
+            cout << "reached";
         }
         else if (arrivalTimes.size() > 0)
         {
@@ -274,6 +366,7 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
             struct tm tm;
             strptime(cstr, "%H:%M", &tm);
             time_t t = mktime(&tm); // t is now your desired time_t
+
             //double comparison = difftime(t, convertedTime);
 
             //if (comparison >= 0.00 && timetablePorts.at(i) == portNumber)
@@ -474,7 +567,7 @@ void *get_in_addr(struct sockaddr *sa)
 
 void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
 {
-    /*
+
     fd_set master;   // master file descriptor list
     fd_set read_fds; // temp file descriptor list for select()
     int fdmax;       // maximum file descriptor number
@@ -502,7 +595,9 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
-    if ((rv = getaddrinfo(NULL, PORT, &hints, &ai)) != 0)
+
+#define port "4005"
+    if ((rv = getaddrinfo(NULL, port, &hints, &ai)) != 0)
     {
         fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
         exit(1);
@@ -519,7 +614,7 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
         // lose the pesky "address already in use" error message
         setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
 
-        if (bind(listener, p->ai_addr, p->ai_addrlen) < 0)
+        if (::bind(listener, p->ai_addr, p->ai_addrlen) < 0)
         {
             close(listener);
             continue;
@@ -590,7 +685,7 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                                          get_in_addr((struct sockaddr *)&remoteaddr),
                                          remoteIP, INET6_ADDRSTRLEN),
                                newfd);
-                    }
+                    } // WRITE TCP here
                 }
                 else
                 {
@@ -634,8 +729,6 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
         }         // END looping through file descriptors
     }             // END for(;;)--and you thought it would never end!
 }
-*/
-}
 
 int main(int argCount, const char *args[])
 {
@@ -650,7 +743,13 @@ int main(int argCount, const char *args[])
         otherIndex++;
     }
 
-    separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
+    //separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
+    //writeUDP("hello", 4004);
+    arrivalTimes.push_back("9:01");
+    departureTimes.push_back("9:00");
+    timetableDepatureTime.push_back("9:00");
+    addCurrentStationToDatagram(path, departureTimes, arrivalTimes, 4004);
+    run(webPort, receivingDatagram, otherStationDatagrams);
 
     //string message = "#\nCottesloe_Stn\n4005";
     // cout << split("What are you having for lunch today?");
