@@ -157,7 +157,6 @@ void removePortIfCovered(string message)
         {
 
             otherStationPorts.erase(otherStationPorts.begin() + i);
-            cout << otherStationPorts.at(i);
             break;
         }
     }
@@ -202,44 +201,45 @@ bool isFinalStation()
     }
     return result;
 }
-//string a = "hello";
-//cout << a[1];
-/*
+
+vector<char> split(const string &str)
+{
+    vector<char> result;
+
+    // For each character in the string
+    for (char ch : str)
+    {
+        // Copy only alphabetical characters and numeric digits
+        //  if (isalnum(ch))
+        //     {
+        result.push_back(ch);
+        //  }
+    }
+
+    return result;
+}
+
 void separateUserInputs(string body)
 {
     int startIndex = 0;
     int endIndex = 0;
     for (int i = 1; i < body.size(); i++)
     {
-        // string first(1, body[i]);
-        string second(1, body[i - 1]);
-        bool foundStart = false;
-        bool foundEnd = false;
-        cout << body[0];
-        char first = body[i];
-        // cout << first;
-        // is not splitting correctly
+        vector<char> result = split(body);
 
-        if (second.compare("o") && !foundStart)
+        if (result.at(i) == '=' && result.at(i - 1) == 'o')
         {
-            //cout << "Reached";
             startIndex = i + 1;
-            foundStart = true;
         }
-        if (second.compare(" ") && !foundEnd)
+        if (result.at(i) == 'H' && result.at(i - 1) == ' ')
         {
-            // cout << "Reached";
             endIndex = i - 1;
-            foundEnd = true;
         }
     }
-    cout << startIndex;
-    //cout << endIndex;
-    requiredDestination = body.substr(startIndex, endIndex);
+    requiredDestination = "";
+    requiredDestination = body.substr(startIndex, endIndex - 9);
     trim(requiredDestination);
-    //cout << requiredDestination;
 }
-*/
 
 const string currentDateTime()
 {
@@ -260,7 +260,7 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
     string time = currentDateTime();
     const char *nowTime = time.c_str();
     struct tm tm;
-    time_t convertedTime = strptime(nowTime, "%H:%M", &tm);
+    //time_t convertedTime = strptime(nowTime, "%H:%M", &tm);
 
     for (int i = 0; i < timetableDepatureTime.size(); i++)
     {
@@ -274,13 +274,13 @@ void addCurrentStationToDatagram(vector<string> path, vector<string> departureTi
             struct tm tm;
             strptime(cstr, "%H:%M", &tm);
             time_t t = mktime(&tm); // t is now your desired time_t
-            double comparison = difftime(t, convertedTime);
+            //double comparison = difftime(t, convertedTime);
 
-            if (comparison >= 0.00 && timetablePorts.at(i) == portNumber)
-            {
-                index = i;
-                break;
-            }
+            //if (comparison >= 0.00 && timetablePorts.at(i) == portNumber)
+            // {
+            //    index = i;
+            ///    break;
+            //}
         }
     }
 }
@@ -650,10 +650,14 @@ int main(int argCount, const char *args[])
         otherIndex++;
     }
 
-    string message = "#\nCottesloe_Stn\n4005";
-    removePortIfCovered(message);
-    readTimetableIn();
-    addCurrentStationToDatagram(path, departureTimes, arrivalTimes, receivingDatagram);
+    separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
+
+    //string message = "#\nCottesloe_Stn\n4005";
+    // cout << split("What are you having for lunch today?");
+
+    //removePortIfCovered(message);
+    //readTimetableIn();
+    //addCurrentStationToDatagram(path, departureTimes, arrivalTimes, receivingDatagram);
     //separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
     // receiveOtherStationNames(message);
     //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
