@@ -76,8 +76,8 @@ vector<int> timetablePorts;
 
 // Other Variables
 // Selector selector;
-string httpHeader = "HTTP/1.1 200 OK\r\n";
-string contentType = "Content-Type: text/html\r\n";
+const char *httpHeader = "HTTP/1.1 200 OK\r\n";
+const char *contentType = "Content-Type: text/html\r\n";
 string datagramClientMessage;
 bool hasReceivedOtherStationNames = false;
 vector<int> otherStationPorts;
@@ -251,9 +251,9 @@ void accept()
         perror("Connect");
         exit(1);
     }
-    string message = httpHeader + contentType + "\r\n" + "<form method='GET'>" + "<input name='to' type='text'/>" + "<input type='submit'/>" + "</form>";
-    const char *cmessage = message.c_str();
-    snprintf(send_data, sizeof(send_data), "%s", cmessage);
+    // string message = httpHeader + contentType + "\r\n" + "<form method='GET'>" + "<input name='to' type='text'/>" + "<input type='submit'/>" + "</form>";
+    //const char *cmessage = message.c_str();
+    //snprintf(send_data, sizeof(send_data), "%s", cmessage);
     //printf("%s\n", send_data);
     send(sock, send_data, strlen(send_data), 0);
     printf("Data sended.\n");
@@ -565,6 +565,40 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
+int send_msg_to_client(int socketfd, char *data)
+{
+
+    struct msghdr msg;
+    struct iovec iov;
+    int s;
+
+    memset(&msg, 0, sizeof(msg));
+    memset(&iov, 0, sizeof(iov));
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    iov.iov_base = data;
+    // replace sizeof(data) by strlen(data)+1
+    iov.iov_len = strlen(data) + 1;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
+
+    printf("msg: %s\n", (char *)iov.iov_base);
+
+    s = sendmsg(socketfd, &msg, 0);
+
+    if (s < 0)
+    {
+        perror("sendmsg");
+        return 0;
+    }
+
+    return s;
+}
+
 void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
 {
 
@@ -685,6 +719,23 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                                          get_in_addr((struct sockaddr *)&remoteaddr),
                                          remoteIP, INET6_ADDRSTRLEN),
                                newfd);
+
+                        const char *fmt = "HTTP/1.1 200 OK\r\n"
+                                          "Content-length: %ld\r\n"
+                                          "Content-Type: text/html\r\n"
+                                          "\r\n"
+                                          "%s";
+
+                        const char *data = "<form method='GET'>"
+                                           "<input name='to' type='text'/>"
+                                           "<input type='submit'/>"
+                                           "</form>";
+                        int datasize = strlen(data);
+
+                        char m[1024];
+                        sprintf(m, fmt, datasize, data);
+
+                        send(newfd, m, strlen(m), 0);
                     } // WRITE TCP here
                 }
                 else
