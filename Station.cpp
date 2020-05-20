@@ -741,16 +741,26 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                     // handle data from a client
                     if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0)
                     {
-                        cout << buf;
+                        //cout << buf;
                         int i = 0;
+                        int charIndex = 0;
+                        char result;
+
                         while (buf[i] != '\0')
                         {
                             if (buf[i] == '=')
                             {
-                                cout << buf[i + 1];
+                                while (buf[i] != '\n')
+                                {
+                                    char variable = buf[i + 1];
+                                    printf("%c", variable);
+                                    break;
+                                }
+                                break;
                             }
                             i++;
                         }
+                        //cout << result;
                         // got error or connection closed by client
                         if (nbytes == 0)
                         {
@@ -793,6 +803,7 @@ int main(int argCount, const char *args[])
 {
     currentStation = args[1]; // Something wrong on this line with the pointer
     webPort = atoi(args[2]);
+    const char *webPortCHAR = args[2];
     receivingDatagram = atoi(args[3]);
 
     int otherIndex = 4;
@@ -821,3 +832,25 @@ int main(int argCount, const char *args[])
     //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
 }
+
+/*
+                                char *line = strtok(strdup(buf), "\n");
+                                while (line)
+                                {
+                                    if (strcmp(line, "=") == true)
+                                    {
+                                        printf("%s", line);
+                                    }
+                                    //printf("%s", line);
+                                    //line = strtok(NULL, "\n");
+                                }
+                                */
+
+//cout << buf[i + 1];
+//cout << buf[i + 2];
+//cout << buf[i + 3];
+
+//     while (buf[i] != ' ')
+//   {
+//       result += buf[i];
+//   }
