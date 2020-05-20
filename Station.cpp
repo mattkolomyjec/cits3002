@@ -597,6 +597,17 @@ int send_msg_to_client(int socketfd, char *data)
     return s;
 }
 
+string convertToString(char *a, int size)
+{
+    int i;
+    string s = "";
+    for (i = 0; i < size; i++)
+    {
+        s = s + a[i];
+    }
+    return s;
+}
+
 void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
 {
 
@@ -629,6 +640,23 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
     hints.ai_flags = AI_PASSIVE;
 
 #define port "4005"
+#define MAXBUFLEN 100
+
+    // DATAGRAM
+    int sockfd;
+    struct addrinfo datagram, *servinfo, *p;
+    int rv;
+    int numbytes;
+    struct sockaddr_storage their_addr;
+    char buf[MAXBUFLEN];
+    socklen_t addr_len;
+    char s[INET6_ADDRSTRLEN];
+
+    memset(&datagram, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+
     if ((rv = getaddrinfo(NULL, port, &hints, &ai)) != 0)
     {
         fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
@@ -742,24 +770,39 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                     if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0)
                     {
                         //cout << buf;
-                        int i = 0;
-                        int charIndex = 0;
-                        char result;
+
+                        char *line = strtok(strdup(buf), "\n");
+                        cout << line;
+                        {
+                            while (line)
+                            {
+                                printf("%s", line);
+                                line = strtok(NULL, "\n");
+                            }
+                        }
+
+                        /*
+                                             int i = 0;
+                        int charStart = 0;
+                        int charEnd = 0;
+                        string result;
 
                         while (buf[i] != '\0')
                         {
                             if (buf[i] == '=')
                             {
-                                while (buf[i] != '\n')
+                                charStart = i;
+                                if (buf[i] == '\n')
                                 {
-                                    char variable = buf[i + 1];
-                                    printf("%c", variable);
+                                    charEnd = i;
                                     break;
                                 }
                                 break;
                             }
                             i++;
                         }
+                        */
+
                         //cout << result;
                         // got error or connection closed by client
                         if (nbytes == 0)
