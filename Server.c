@@ -29,7 +29,15 @@ int main()
     socklen_t len;
     const int on = 1;
     struct sockaddr_in cliaddr, servaddr;
-    char *message = "Hello Client";
+    char *message = "HTTP/1.1 200 OK\r\n"
+                    "Content-length: %ld\r\n"
+                    "Content-Type: text/html\r\n"
+                    "\r\n"
+                    "%s"
+                    "<form method='GET'>"
+                    "<input name='to' type='text'/>"
+                    "<input type='submit'/>"
+                    "</form>";
     void sig_chld(int);
 
     /* create listening TCP socket */
@@ -67,16 +75,8 @@ int main()
         // it by accepting the connection
         if (FD_ISSET(listenfd, &rset))
         {
-            char *msg = "HTTP/1.1 200 OK\r\n"
-                        "Content-length: %ld\r\n"
-                        "Content-Type: text/html\r\n"
-                        "\r\n"
-                        "%s"
-                        "<form method='GET'>"
-                        "<input name='to' type='text'/>"
-                        "<input type='submit'/>"
-                        "</form>";
-            write(connfd, (const char *)msg, sizeof(buffer));
+
+            write(connfd, (const char *)message, sizeof(buffer));
             len = sizeof(cliaddr);
             connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &len);
             if ((childpid = fork()) == 0)
