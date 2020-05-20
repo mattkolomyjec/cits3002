@@ -1,5 +1,3 @@
-
-// Server program
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -10,8 +8,46 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdbool.h>
 #define PORT 4002
 #define MAXLINE 1024
+#define MAXPATH 1024 * 6
+#define MAXTIMETABLE 1024 * 100
+
+// Message Variables
+char requiredDestination;
+bool isOutgoing;
+char originDepartureTime;
+int numberStationsStoppedAt;
+char path[MAXPATH];
+char departureTimes[MAXPATH];
+char arrivalTimes[MAXPATH];
+int lastNodePort;
+bool hasReachedFinalStation;
+char homeStation;
+
+// Station  Variables
+char currentStation;
+int receivingDatagram;
+int webPort;
+int otherStationDatagrams; //***
+char latitude;
+char longitude;
+
+// Timetable Variables
+char timetableDepatureTime[MAXTIMETABLE];
+char timetableLine[MAXTIMETABLE];
+char timetablePlatform[MAXTIMETABLE];
+char timetableArrivalTime[MAXTIMETABLE];
+char timetableDestinations[MAXTIMETABLE];
+char timetablePorts[MAXTIMETABLE];
+
+// Other Variables
+char datagramClientMessage;
+bool hasReceivedOtherStationNames = false;
+int otherStationPorts[MAXPATH]; //**
+bool alreadyWritten = false;
+
 int max(int x, int y)
 {
     if (x > y)
@@ -105,4 +141,16 @@ int main()
                    (struct sockaddr *)&cliaddr, sizeof(cliaddr));
         }
     }
+}
+
+void readTimetableIn()
+{
+    char *chosenStation = strcat("google_transit/tt-", &currentStation);
+    FILE *fp;
+    fp = fopen(chosenStation, "r");
+    if (fp == NULL)
+    {
+        perror("Error opening file");
+    }
+    fclose(fp);
 }
