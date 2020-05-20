@@ -76,8 +76,6 @@ vector<int> timetablePorts;
 
 // Other Variables
 // Selector selector;
-const char *httpHeader = "HTTP/1.1 200 OK\r\n";
-const char *contentType = "Content-Type: text/html\r\n";
 string datagramClientMessage;
 bool hasReceivedOtherStationNames = false;
 vector<int> otherStationPorts;
@@ -680,7 +678,7 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
     fdmax = listener; // so far, it's this one
 
     // main loop
-    for (;;)
+    while (true)
     {
         read_fds = master; // copy it
         if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1)
@@ -719,7 +717,7 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                                          get_in_addr((struct sockaddr *)&remoteaddr),
                                          remoteIP, INET6_ADDRSTRLEN),
                                newfd);
-
+                        // WRITE TCP here
                         const char *fmt = "HTTP/1.1 200 OK\r\n"
                                           "Content-length: %ld\r\n"
                                           "Content-Type: text/html\r\n"
@@ -736,13 +734,23 @@ void run(int webPort, int receivingDatagram, vector<int> otherStationDatagrams)
                         sprintf(m, fmt, datasize, data);
 
                         send(newfd, m, strlen(m), 0);
-                    } // WRITE TCP here
+                    }
                 }
                 else
                 {
                     // handle data from a client
                     if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0)
                     {
+                        cout << buf;
+                        int i = 0;
+                        while (buf[i] != '\0')
+                        {
+                            if (buf[i] == '=')
+                            {
+                                cout << buf[i + 1];
+                            }
+                            i++;
+                        }
                         // got error or connection closed by client
                         if (nbytes == 0)
                         {
