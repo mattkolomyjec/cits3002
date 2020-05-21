@@ -47,10 +47,8 @@ def addPortsToTimetable(ports):
             timetablePorts.insert(index, ports[currentKey])
             index += 1 
         else:
-            timetablePorts.insert(index, 0)
+            #timetablePorts.insert(index, 0)
             index += 1
-
-    
 
 ## Verified
 def receiveOtherStationNames(message):
