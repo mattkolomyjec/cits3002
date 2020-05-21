@@ -95,6 +95,109 @@ def separateUserInputs(body):
     requiredDestination = body[startIndex:endIndex]
     requiredDestination.strip()
 
+
+
+def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
+    if(isOutgoing):
+        result = "Outgoing \n"
+    else:
+        result = "Incoming \n"
+    result += requiredDestination + " " + originDepartureTime + " " + numberStationsStoppedAt + " " + lastNodePort
+    + " " + hasReachedFinalStation + " " + homeStation + " \n"
+    
+    index = 0
+    for i in path:
+        result += i + " " + departureTimes[index] + " " + arrivalTimes[index] + " \n"
+    return result
+
+def reset():
+    isOutgoing = True
+    requiredDestination = ""
+    originDepartureTime = ""
+    numberStationsStoppedAt = 0
+    path.clear()
+    departureTimes.clear()
+    lastNodePort = 0
+    hasReachedFinalStation = False
+    homeStation = ""
+
+def datagramHasNull(message):
+    result = False
+    temp = message.split(' ')
+    for i in temp:
+        if("null" in i):
+            result = True
+            break
+    return result
+
+def readDatagramIn(message):
+    reset()
+    temp = message.split(" ")
+    if("Outgoing" in temp[0]):
+        isOutgoing = True
+    else:
+        isOutgoing = False
+    requiredDestination = temp[1]
+    originDepartureTime = temp[2]
+
+    trimString = temp[3]
+    trimString.strip()
+    numberStationsStoppedAt = int(trimString)
+
+    trimString = ""
+
+    trimString = temp[4]
+    trimString.strip()
+    lastNodePort = int(trimString)
+
+    trimString = ""
+
+    trimString = temp[5]
+    trimString.strip()
+    if("true" in trimString):
+        hasReachedFinalStation = True
+    else:
+        hasReachedFinalStation = False
+    
+    trimString = ""
+
+    trimString = temp[6]
+    trimString.strip()
+    homeStation = trimString
+
+    #### 398 in Java
+
+def datagramChecks():
+    if(isFinalStation() and isOutgoing and hasReachedFinalStation == False):
+        isOutgoing = False
+        hasReachedFinalStation = True
+        numberStationsStoppedAt += 1
+        lastNodePort = receivingDatagram
+
+        for i in otherStationDatagrams:
+            ## add current station to adatagram
+            message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
+            writeUDP(message, i)
+    elif(isFinalStation() == False and isOutgoing and hasReachedFinalStation == False):
+        numberStationsStoppedAt += 1
+        oldPort = lastNodePort
+        for i in otherStationDatagrams:
+            if(i == oldPort):
+                continue
+            else:
+                ## add current station to datagram
+                message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
+                writeUDP(message, i)
+    elif(isFinalStation() == False and isOutgoing == False and hasReachedFinalStation):
+        oldPort = lastNodePort
+        lastNodePort = receivingDatagram
+        message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
+        for i in otherStationDatagrams:
+            if(i == oldPort):
+                continue
+            else:
+                writeUDP(message, i)
+
 def read_tcp(s):
         client,addr = s.accept()
         data = client.recv(4002)
@@ -105,7 +208,7 @@ def read_udp(s):
         data,addr = s.recvfrom(4003)
         print "Recv UDP:'%s'" % data
 
-def run(webPort, receiveDatagram, otherDatagrams):
+def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
     port = 4002
     size = 8000
@@ -118,7 +221,7 @@ def run(webPort, receiveDatagram, otherDatagrams):
 
     # create udp socket
     udp = socket(AF_INET, SOCK_DGRAM)
-    udp.bind(('',receiveDatagram))
+    udp.bind(('',receivingDatagram))
 
     input = [tcp,udp]
 
