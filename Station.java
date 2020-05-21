@@ -440,11 +440,12 @@ public class Station {
 
             int oldPort = lastNodePort;
             lastNodePort = receivingDatagram;
-
+            boolean routeDoesNotExist = true;
             for (int i = 0; i < otherStationDatagrams.length; i++) {
                 if (otherStationDatagrams[i] == oldPort) {
                     continue;
                 } else {
+                    routeDoesNotExist = false;
                     addCurrentStationToDatagram(path, departureTimes, arrivalTimes, otherStationDatagrams[i]);
                     message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime,
                             numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort,

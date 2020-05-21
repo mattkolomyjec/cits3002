@@ -21,29 +21,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <errno.h>
-#include <arpa/inet.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-
 using namespace std;
 
 // Message Variables
@@ -597,121 +574,203 @@ int send_msg_to_client(int socketfd, char *data)
     return s;
 }
 
-string convertToString(char *a, int size)
+void run(const char *webPort, int receivingDatagram, vector<int> otherStationDatagrams)
 {
-    int i;
-    string s = "";
-    for (i = 0; i < size; i++)
+    readTimetableIn();
+    fd_set master;   // master file descriptor list
+    fd_set read_fds; // temp file descriptor list for select()
+    int fdmax;       // maximum file descriptor number
+
+    int listener;                       // listening socket descriptor
+    int newfd;                          // newly accept()ed socket descriptor
+    struct sockaddr_storage remoteaddr; // client address
+    socklen_t addrlen;
+
+    char buf[256]; // buffer for client data
+    int nbytes;
+
+    char remoteIP[INET6_ADDRSTRLEN];
+
+    int yes = 1; // for setsockopt() SO_REUSEADDR, below
+    int i, j, rv;
+
+    struct addrinfo hints, *ai, *p;
+
+    FD_ZERO(&master); // clear the master and temp sets
+    FD_ZERO(&read_fds);
+
+    // get us a socket and bind it
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    //#define port "4005"
+
+    if ((rv = getaddrinfo(NULL, webPort, &hints, &ai)) != 0)
     {
-        s = s + a[i];
+        fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
+        exit(1);
     }
-    return s;
-}
 
-void run2()
-{
-#define PORT 4005
-#define MAXLINE 1024
-    int listenfd, connfd, udpfd, nready, maxfdp1;
-    char buffer[MAXLINE];
-    pid_t childpid;
-    fd_set rset;
-    ssize_t n;
-    socklen_t len;
-    const int on = 1;
-    struct sockaddr_in cliaddr, servaddr;
-    const char *message = "HTTP/1.1 200 OK\r\n"
-                          "Content-length: %ld\r\n"
-                          "Content-Type: text/html\r\n"
-                          "\r\n"
-                          "%s"
-                          "<form method='GET'>"
-                          "<input name='to' type='text'/>"
-                          "<input type='submit'/>"
-                          "</form>";
-    void sig_chld(int);
-
-    /* create listening TCP socket */
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
-
-    // binding server addr structure to listenfd
-    bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-    listen(listenfd, 10);
-
-    /* create UDP socket */
-    udpfd = socket(AF_INET, SOCK_DGRAM, 0);
-    // binding server addr structure to udp sockfd
-    bind(udpfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-
-    // clear the descriptor set
-    FD_ZERO(&rset);
-
-    // get maxfd
-    maxfdp1 = max(listenfd, udpfd) + 1;
-    for (;;)
+    for (p = ai; p != NULL; p = p->ai_next)
     {
-
-        // set listenfd and udpfd in readset
-        FD_SET(listenfd, &rset);
-        FD_SET(udpfd, &rset);
-
-        // select the ready descriptor
-        nready = select(maxfdp1, &rset, NULL, NULL, NULL);
-
-        // if tcp socket is readable then handle
-        // it by accepting the connection
-        if (FD_ISSET(listenfd, &rset))
+        listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (listener < 0)
         {
+            continue;
+        }
 
-            write(connfd, (const char *)message, sizeof(buffer));
-            len = sizeof(cliaddr);
-            connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &len);
-            if ((childpid = fork()) == 0)
-            {
-                close(listenfd);
-                bzero(buffer, sizeof(buffer));
-                printf("Message From TCP client: ");
-                read(connfd, buffer, sizeof(buffer));
-                puts(buffer);
-                write(connfd, (const char *)message, sizeof(buffer));
-                close(connfd);
-                exit(0);
-            }
-            close(connfd);
-        }
-        // if udp socket is readable receive the message.
-        if (FD_ISSET(udpfd, &rset))
+        // lose the pesky "address already in use" error message
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+
+        if (::bind(listener, p->ai_addr, p->ai_addrlen) < 0)
         {
-            len = sizeof(cliaddr);
-            bzero(buffer, sizeof(buffer));
-            printf("\nMessage from UDP client: ");
-            n = recvfrom(udpfd, buffer, sizeof(buffer), 0,
-                         (struct sockaddr *)&cliaddr, &len);
-            puts(buffer);
-            int i = 0;
-            if (buffer[i] == '#')
-            {
-                // Read UDP IN
-            }
-            else
-            {
-                // READ datagram in
-            }
-            // sendto(udpfd, (const char *)message, sizeof(buffer), 0,
-            //      (struct sockaddr *)&cliaddr, sizeof(cliaddr));
+            close(listener);
+            continue;
         }
+
+        break;
     }
+
+    // if we got here, it means we didn't get bound
+    if (p == NULL)
+    {
+        fprintf(stderr, "selectserver: failed to bind\n");
+        exit(2);
+    }
+
+    freeaddrinfo(ai); // all done with this
+
+    // listen
+    if (listen(listener, 10) == -1)
+    {
+        perror("listen");
+        exit(3);
+    }
+
+    // add the listener to the master set
+    FD_SET(listener, &master);
+
+    // keep track of the biggest file descriptor
+    fdmax = listener; // so far, it's this one
+
+    // main loop
+    while (true)
+    {
+        read_fds = master; // copy it
+        if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1)
+        {
+            perror("select");
+            exit(4);
+        }
+
+        // run through the existing connections looking for data to read
+        for (i = 0; i <= fdmax; i++)
+        {
+            if (FD_ISSET(i, &read_fds))
+            { // we got one!!
+                if (i == listener)
+                {
+                    // handle new connections
+                    addrlen = sizeof remoteaddr;
+                    newfd = accept(listener,
+                                   (struct sockaddr *)&remoteaddr,
+                                   &addrlen);
+
+                    if (newfd == -1)
+                    {
+                        perror("accept");
+                    }
+                    else
+                    {
+                        FD_SET(newfd, &master); // add to master set
+                        if (newfd > fdmax)
+                        { // keep track of the max
+                            fdmax = newfd;
+                        }
+                        printf("selectserver: new connection from %s on "
+                               "socket %d\n",
+                               inet_ntop(remoteaddr.ss_family,
+                                         get_in_addr((struct sockaddr *)&remoteaddr),
+                                         remoteIP, INET6_ADDRSTRLEN),
+                               newfd);
+                        // WRITE TCP here
+                        const char *fmt = "HTTP/1.1 200 OK\r\n"
+                                          "Content-length: %ld\r\n"
+                                          "Content-Type: text/html\r\n"
+                                          "\r\n"
+                                          "%s";
+
+                        const char *data = "<form method='GET'>"
+                                           "<input name='to' type='text'/>"
+                                           "<input type='submit'/>"
+                                           "</form>";
+                        int datasize = strlen(data);
+
+                        char m[1024];
+                        sprintf(m, fmt, datasize, data);
+
+                        send(newfd, m, strlen(m), 0);
+                    }
+                }
+                else
+                {
+                    // handle data from a client
+                    if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0)
+                    {
+                        cout << buf;
+                        int i = 0;
+                        while (buf[i] != '\0')
+                        {
+                            if (buf[i] == '=')
+                            {
+                                cout << buf[i + 1];
+                            }
+                            i++;
+                        }
+                        // got error or connection closed by client
+                        if (nbytes == 0)
+                        {
+                            // connection closed
+                            printf("selectserver: socket %d hung up\n", i);
+                        }
+                        else
+                        {
+                            perror("recv");
+                        }
+                        close(i);           // bye!
+                        FD_CLR(i, &master); // remove from master set
+                    }
+                    else
+                    {
+                        // we got some data from a client
+                        for (j = 0; j <= fdmax; j++)
+                        {
+                            // send to everyone!
+                            if (FD_ISSET(j, &master))
+                            {
+                                // except the listener and ourselves
+                                if (j != listener && j != i)
+                                {
+                                    if (send(j, buf, nbytes, 0) == -1)
+                                    {
+                                        perror("send");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } // END handle data from client
+            }     // END got new incoming connection
+        }         // END looping through file descriptors
+    }             // END for(;;)--and you thought it would never end!
 }
 
 int main(int argCount, const char *args[])
 {
     currentStation = args[1]; // Something wrong on this line with the pointer
     webPort = atoi(args[2]);
-    const char *webPortCHAR = args[2];
     receivingDatagram = atoi(args[3]);
 
     int otherIndex = 4;
@@ -721,30 +780,23 @@ int main(int argCount, const char *args[])
         otherIndex++;
     }
 
-    //run(webPort, receivingDatagram, otherStationDatagrams);
-    run2();
+    //separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
+    //writeUDP("hello", 4004);
+    // arrivalTimes.push_back("9:01");
+    //   departureTimes.push_back("9:00");
+    // timetableDepatureTime.push_back("9:00");
+    // addCurrentStationToDatagram(path, departureTimes, arrivalTimes, 4004);
 
+    run(args[2], receivingDatagram, otherStationDatagrams);
+
+    //string message = "#\nCottesloe_Stn\n4005";
+    // cout << split("What are you having for lunch today?");
+
+    //removePortIfCovered(message);
+
+    //addCurrentStationToDatagram(path, departureTimes, arrivalTimes, receivingDatagram);
+    //separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1");
+    // receiveOtherStationNames(message);
+    //cout << (constructDatagram(true, "Subiaco-Stn", "9:00", 10, path, departureTimes, arrivalTimes));
     return 0;
 }
-
-/*
-                                char *line = strtok(strdup(buf), "\n");
-                                while (line)
-                                {
-                                    if (strcmp(line, "=") == true)
-                                    {
-                                        printf("%s", line);
-                                    }
-                                    //printf("%s", line);
-                                    //line = strtok(NULL, "\n");
-                                }
-                                */
-
-//cout << buf[i + 1];
-//cout << buf[i + 2];
-//cout << buf[i + 3];
-
-//     while (buf[i] != ' ')
-//   {
-//       result += buf[i];
-//   }
