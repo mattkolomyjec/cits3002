@@ -122,8 +122,9 @@ def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numb
         result = "Outgoing \n"
     else:
         result = "Incoming \n"
-    result += requiredDestination + " " + originDepartureTime + " " + numberStationsStoppedAt + " " + lastNodePort
-    + " " + hasReachedFinalStation + " " + homeStation + " \n"
+    
+    result += (requiredDestination + " " + str(originDepartureTime) + " " + str(numberStationsStoppedAt) + " " + str(lastNodePort)
+    + " " + str(hasReachedFinalStation) + " " + str(homeStation) + " \n")
     
     index = 0
     for i in path:
@@ -135,8 +136,9 @@ def reset():
     requiredDestination = ""
     originDepartureTime = ""
     numberStationsStoppedAt = 0
-    path.clear()
-    departureTimes.clear()
+    del path[:]
+    del departureTimes[:]
+    del arrivalTimes[:]
     lastNodePort = 0
     hasReachedFinalStation = False
     homeStation = ""
@@ -185,7 +187,18 @@ def readDatagramIn(message):
     trimString.strip()
     homeStation = trimString
 
-    #### 398 in Java
+    pathIndex = 7
+    departureIndex = 8
+    arrivalIndex = 9
+    i = 0
+    while(i <= numberStationsStoppedAt-1):
+        path.append(temp[pathIndex])
+        pathIndex += 3
+        departureTimes.append(temp[departureIndex])
+        departureIndex += 3
+        arrivalTimes.append(temp[arrivalIndex])
+        arrivalIndex += 3
+        i += 1
 
 def datagramChecks():
     if(isFinalStation() and isOutgoing and hasReachedFinalStation == False):
@@ -262,7 +275,12 @@ def main():
     global isOutgoing
     global originDepartureTime
     global numberStationsStoppedAt
-    #global path = []
+    global path
+    path = []
+    global departureTimes
+    departureTimes = []
+    global arrivalTimes
+    arrivalTimes = []
     global lastNodePort
     global hasReachedFinalStation
     global homeStation
@@ -293,9 +311,15 @@ def main():
     while(len(sys.argv)-1 >= index):
         otherStationDatagrams.append(int(sys.argv[index]))
         index += 1
-        
+
     otherStationPorts = otherStationDatagrams
 
+
+    path.append("BLAH")
+    departureTimes.append("8:45")
+    arrivalTimes.append("7:00")
+    message = constructDatagram(True, "Warwick-Stn", "9:00", 1, path, departureTimes, arrivalTimes, 3004, False, "Thornlie-Stn")
+    readDatagramIn(message)
     
 
     otherDatagrams = int(sys.argv[4])
