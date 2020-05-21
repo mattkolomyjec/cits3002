@@ -239,8 +239,19 @@ def read_tcp(s, webPort):
         client,addr = s.accept()
         data = client.recv(webPort)
         client.close()
-        print "Recv TCP:'%s'" % data
-        separateUserInputs(data)
+        for line in data.splitlines():
+            print(line)
+            separateUserInputs(line)
+            break
+        # Flood to all ports
+        lastNodePort = receivingDatagram
+        isOutgoing = true
+        homeStation = currentStation
+
+        for i in otherStationDatagrams
+            #determine origin departure time
+            message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
+            writeUDP(message, i)
 
 def read_udp(s):
         data,addr = s.recvfrom(4003)
