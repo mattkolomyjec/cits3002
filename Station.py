@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 import argparse
 
+
 # Verified
 def readTimetableIn():
     chosenStation = "google_transit/tt-" + currentStation
@@ -37,7 +38,7 @@ def readTimetableIn():
         timetableDestinations.append(input[4])
         input = f.readline().split(',')
 
-## Verified
+
 def addPortsToTimetable(ports):
     index = 0
     for i in timetableDestinations:
@@ -45,10 +46,12 @@ def addPortsToTimetable(ports):
         currentKey = currentKey.rstrip("\n")
         if(currentKey in ports.keys()):
             timetablePorts.insert(index, ports[currentKey])
-            index += 1 
+            index += 1
+            continue
         else:
             #timetablePorts.insert(index, 0)
             index += 1
+            continue
 
 ## Verified
 def receiveOtherStationNames(message):
@@ -98,26 +101,27 @@ def separateUserInputs(body):
         index += 1
 
     requiredDestination = body[startIndex:endIndex]
-    requiredDestination.strip()
-    print(requiredDestination)
+    requiredDestination.strip() # not a global variable?
+    return requiredDestination
+    
 
 def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     now = datetime.now()
-    print now.hour, ":", now.minute
+    #print now.hour, ":", now.minute
     path.append(currentStation)
     i = 0
     index = 0
     for i in timetableDepartureTime:
         timetableString = i
         datetime_object = datetime.strptime(timetableString,'%I:%M')
-        print(datetime_object)
+        #print(datetime_object)
         if(arrivalTimes.size() > 0):
             if(datetime_object > now and timetablePorts[i] == portNumber):
                 index = i
                 break
         elif(arrivalTimes.size() > 0):
             lastArrivalTime = arrivalTimes[arrivalTimes.size()-1]
-            nextTime = datetime.strptime(lastArrivalTime,'%I:%M')
+            nextTime = datetime.strptime(lastArrivalTime,'%H:%M')
             if(datetime_object > nextTime and timetablePorts[i] == portNumber):
                 index = i
                 break
@@ -129,13 +133,13 @@ def determineOriginDepartureTime(port):
     now = datetime.now()
   
     #datetime_object = datetime.strptime(now,'%I:%M')
-    print(now)
+    #rint(now)
     index = 0
     k = 0
     for i in timetableDepartureTime:
         timetableString = i
-        nextTime = datetime.strptime(timetableString,'%I:%M')
-        print(nextTime > now)
+        nextTime = datetime.strptime(timetableString,'%H:%M')
+        #print(nextTime > now)
         if(nextTime > now and timetablePorts[k] == port):
             index = k
             break
@@ -265,14 +269,19 @@ def readTCP(s, webPort):
         data = client.recv(webPort)
         client.close()
         for line in data.splitlines():
-            print(line)
-            separateUserInputs(line)
+            #print(line)
+            requiredDestination = separateUserInputs(line) #### MADE separateUserInputs return requiredDestination
             break
+        
         # Flood to all ports
         lastNodePort = receivingDatagram
         isOutgoing = True
         homeStation = currentStation
+        numberStationsStoppedAt = 0
+        hasReachedFinalStation = False
 
+        print(requiredDestination)
+        
         for i in otherStationDatagrams:
             originDepartureTime = determineOriginDepartureTime(i)
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
@@ -350,9 +359,10 @@ def run(webPort, receivingDatagram, otherDatagrams):
     udp.bind(('',receivingDatagram))
 
     input = [tcp,udp]
-
+    '''    
     print("Reading data from adjacent ports!")
 
+   
     # Send station names until receieved
     while(hasReceievedOtherStationNames == False):
         sendOtherStationNames()
@@ -362,8 +372,9 @@ def run(webPort, receivingDatagram, otherDatagrams):
         for s in inputready:
             if s == udp:
                 readUDP(s, receivingDatagram)
-
-    print("Server started on port >> " + webPort)
+    '''
+    print("Server started on port >> " + str(webPort))
+    
 
     # send html data
     conn, addr = tcp.accept()
