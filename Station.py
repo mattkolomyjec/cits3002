@@ -75,6 +75,26 @@ def isFinalStation():
         result = True
     return result
 
+# Python3 program to Split string into characters https://www.geeksforgeeks.org/python-split-string-into-list-of-characters/
+def split(word): 
+    return [char for char in word]  
+
+# Verified
+def separateUserInputs(body):
+    temp = split(body)
+    startIndex = 0
+    endIndex = 0
+    index = 0
+    for i in temp:
+        if("=" in i):
+            startIndex = index + 1
+        if(" " in i):
+            endIndex = index - 1
+        index += 1
+
+    requiredDestination = body[startIndex:endIndex]
+    requiredDestination.strip()
+
 def read_tcp(s):
         client,addr = s.accept()
         data = client.recv(4002)
@@ -156,7 +176,7 @@ def main():
     otherDatagrams = int(sys.argv[4])
     # readTimetableIn()
     requiredDestination = "Cottesloe_Stn "
-    print(isFinalStation())
+    separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1")
     run(webPort,  receivingDatagram, otherDatagrams)
 
 if __name__ == '__main__':
