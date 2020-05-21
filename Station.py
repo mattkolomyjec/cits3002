@@ -37,15 +37,22 @@ def readTimetableIn():
         timetableDestinations.append(input[4])
         input = f.readline().split(',')
 
-## Not Verified
+## Verified
 def addPortsToTimetable(ports):
+    index = 0
     for i in timetableDestinations:
-        currentKey = timetableDestinations[i]
-        if(currentKey in ports):
-            global timetablePorts
-            timetablePorts[i] = ports[currentKey]
+        currentKey = timetableDestinations[index]
+        currentKey = currentKey.rstrip("\n")
+        if(currentKey in ports.keys()):
+            timetablePorts.insert(index, ports[currentKey])
+            index += 1 
+        else:
+            timetablePorts.insert(index, 0)
+            index += 1
 
-## Not Verified
+    
+
+## Verified
 def receiveOtherStationNames(message):
     temp = message.split('\n')
     map = {temp[1]: temp[2]}
@@ -275,10 +282,10 @@ def readTCP(s, webPort):
 
 def readUDP(s, receivingDatagram):
         data,addr = s.recvfrom(receivingDatagram)
-        print "Recv UDP:'%s'" % data
+        #print "Recv UDP:'%s'" % data
         if(data.startswith('#')):
             removePortIfCovered(data)
-            if(otherStationPorts.size() == 0):
+            if(len(otherStationPorts) == 0):
                 receiveOtherStationNames(data)
                 hasReceievedOtherStationNames = True
             else:
@@ -294,11 +301,11 @@ def readUDP(s, receivingDatagram):
 
 
 def writeUDP(message, port):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #sock.bind((socket.gethostname(), port)) 
-    server_address = ('127.0.0.1', port)
-    sent = sock.sendto(message, server_address)
-    sock.close()
+    serverAddressPort   = ("127.0.0.1", port)
+    udp.sendto(message, serverAddressPort)
+    #localIP     = "127.0.0.1"
+    #UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+    
 
 # Method to send the result
 def writeTCP(s):
@@ -340,6 +347,7 @@ def run(webPort, receivingDatagram, otherDatagrams):
     tcp.listen(backlog)
 
     # create udp socket
+    global udp
     udp = socket(AF_INET, SOCK_DGRAM)
     udp.bind(('',receivingDatagram))
 
@@ -355,7 +363,7 @@ def run(webPort, receivingDatagram, otherDatagrams):
 
         for s in inputready:
             if s == udp:
-                readUDP(key)
+                readUDP(s, receivingDatagram)
 
     print("Server started on port >> " + webPort)
 
@@ -415,6 +423,8 @@ def main():
     hasReceievedOtherStationNames = False
     global alreadyWritten
     alreadyWritten = False
+    global timetablePorts
+    timetablePorts = []
 
     
     currentStation = sys.argv[1]
