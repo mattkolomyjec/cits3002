@@ -95,7 +95,29 @@ def separateUserInputs(body):
     requiredDestination = body[startIndex:endIndex]
     requiredDestination.strip()
 
-
+def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
+    now = datetime.datetime.now()
+    print now.hour, ":", now.minute
+    path.append(currentStation)
+    i = 0
+    index = 0
+    for i in timetableDepartureTime:
+        timetableString = i
+        datetime_object = datetime.strptime(timetableString,'%I:%M')
+        print(datetime_object)
+        if(arrivalTimes.size() > 0):
+            if(datetime_object > now and timetablePorts[i] == portNumber):
+                index = i
+                break
+        elif(arrivalTimes.size() > 0):
+            lastArrivalTime = arrivalTimes[arrivalTimes.size()-1]
+            nextTime = datetime.strptime(lastArrivalTime,'%I:%M')
+            if(datetime_object > nextTime and timetablePorts[i] == portNumber):
+                index = i
+                break
+        i += 1
+    departureTimes.append(timetableDepartureTime[index])
+    arrivalTimes.append(timetableArrivalTime[index])
 
 def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
     if(isOutgoing):
@@ -175,7 +197,7 @@ def datagramChecks():
         lastNodePort = receivingDatagram
 
         for i in otherStationDatagrams:
-            ## add current station to adatagram
+            addCurrentStationToDatagram(path, departureTimes, arrivalTimes, i)
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
             writeUDP(message, i)
     elif(isFinalStation() == False and isOutgoing and hasReachedFinalStation == False):
@@ -185,7 +207,7 @@ def datagramChecks():
             if(i == oldPort):
                 continue
             else:
-                ## add current station to datagram
+                addCurrentStationToDatagram(path, departureTimes, arrivalTimes, i)
                 message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
                 writeUDP(message, i)
     elif(isFinalStation() == False and isOutgoing == False and hasReachedFinalStation):
@@ -280,6 +302,8 @@ def main():
     # readTimetableIn()
     requiredDestination = "Cottesloe_Stn "
     separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1")
+    now = datetime.datetime.now()
+    print now.hour, ":", now.minute
     run(webPort,  receivingDatagram, otherDatagrams)
 
 if __name__ == '__main__':
