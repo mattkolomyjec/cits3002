@@ -1,8 +1,10 @@
 from socket import *
+#import socket
 from select import select
 import sys 
 import re
-import time, datetime
+import time
+from datetime import datetime
 import argparse
 
 # Verified
@@ -60,9 +62,9 @@ def removePortIfCovered(message):
             break
 
 def sendOtherStationNames():
-    message = "#" + "\n" + currentStation + "\n" + receivingDatagram
+    message = "#" + "\n" + currentStation + "\n" + str(receivingDatagram)
     for i in otherStationDatagrams:
-        writeUDP(message, otherStationDatagrams[i])
+        writeUDP(message, i)
 
 # Verified
 def isFinalStation():
@@ -95,7 +97,7 @@ def separateUserInputs(body):
     print(requiredDestination)
 
 def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
-    now = datetime.datetime.now()
+    now = datetime.now()
     print now.hour, ":", now.minute
     path.append(currentStation)
     i = 0
@@ -118,14 +120,18 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     departureTimes.append(timetableDepartureTime[index])
     arrivalTimes.append(timetableArrivalTime[index])
 
-def determineOriginDepartureTime(port)
-    now = datetime.datetime.now()
+def determineOriginDepartureTime(port):
+    now = datetime.now()
+  
+    #datetime_object = datetime.strptime(now,'%I:%M')
+    print(now)
     index = 0
     k = 0
-    for i in timetableDepartureTime
+    for i in timetableDepartureTime:
         timetableString = i
         nextTime = datetime.strptime(timetableString,'%I:%M')
-        if(nextTime > now and timetablePorts[k] == port)
+        print(nextTime > now)
+        if(nextTime > now and timetablePorts[k] == port):
             index = k
             break
         k += 1
@@ -249,7 +255,7 @@ def datagramChecks():
             else:
                 writeUDP(message, i)
 
-def read_tcp(s, webPort):
+def readTCP(s, webPort):
         client,addr = s.accept()
         data = client.recv(webPort)
         client.close()
@@ -259,30 +265,72 @@ def read_tcp(s, webPort):
             break
         # Flood to all ports
         lastNodePort = receivingDatagram
-        isOutgoing = true
+        isOutgoing = True
         homeStation = currentStation
 
-        for i in otherStationDatagrams
-            #determine origin departure time
+        for i in otherStationDatagrams:
+            originDepartureTime = determineOriginDepartureTime(i)
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
             writeUDP(message, i)
 
-def read_udp(s):
-        data,addr = s.recvfrom(4003)
+def readUDP(s, receivingDatagram):
+        data,addr = s.recvfrom(receivingDatagram)
         print "Recv UDP:'%s'" % data
-        
+        if(data.startswith('#')):
+            removePortIfCovered(data)
+            if(otherStationPorts.size() == 0):
+                receiveOtherStationNames(data)
+                hasReceievedOtherStationNames = True
+            else:
+                receiveOtherStationNames(data)
+        else:
+            if(datagramHasNull(data) == False and hasReceievedOtherStationNames == True):
+                readDatagramIn(data)
+            if(hasReachedFinalStation and isOutgoing == False and homeStation in currentStation):
+                ## REGISTER CHANNEL WRITING?
+                writeTCP(s)
+            else:
+                datagramChecks()
+
+
+def writeUDP(message, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #sock.bind((socket.gethostname(), port)) 
+    server_address = ('127.0.0.1', port)
+    sent = sock.sendto(message, server_address)
+    sock.close()
 
 # Method to send the result
-def write_tcp(s):
+def writeTCP(s):
     client,addr = s.accept()
     client.send('HTTP/1.0 200 OK\n')
     client.send('Content-Type: text/html\n')
-    client.send('\n') 
+    client.send('\n')
+    client.send('<br>')
+    client.send('<br> <strong> Destination:</strong> ')
+    client.send(requiredDestination)
+    client.send('<br> <strong> Origin:</strong> ')
+    client.send(currentStation)
+    client.send('<div> <br> <strong> Route </strong> (Departing Time | Stop | Arrival Time) </div>\n')
+    index = 0
+    for i in path:
+        client.send('<br>')
+        cleint.send('Departing at: <strong>')
+        client.send(departureTimes[index])
+        client.send('</strong>; To: ')
+        client.send('<strong>')
+        client.send(i)
+        client.send('</strong>; Arriving at:  <strong>')
+        client.send(arrivalTimes[index])
+        client.send('</strong>;')
+        index += 1
+    client.send('<br>')
+    client.send('________________________________________')
+    client.send('<br>')
     
-
 def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
-    port = 4002
+    #port = 4002
     size = 8000
     backlog = 5
 
@@ -290,6 +338,26 @@ def run(webPort, receivingDatagram, otherDatagrams):
     tcp = socket(AF_INET, SOCK_STREAM)
     tcp.bind(('',webPort))
     tcp.listen(backlog)
+
+    # create udp socket
+    udp = socket(AF_INET, SOCK_DGRAM)
+    udp.bind(('',receivingDatagram))
+
+    input = [tcp,udp]
+
+    print("Reading data from adjacent ports!")
+
+    # Send station names until receieved
+    while(hasReceievedOtherStationNames == False):
+        sendOtherStationNames()
+
+        inputready,outputready,exceptready = select(input,[],[])
+
+        for s in inputready:
+            if s == udp:
+                readUDP(key)
+
+    print("Server started on port >> " + webPort)
 
     # send html data
     conn, addr = tcp.accept()
@@ -304,22 +372,16 @@ def run(webPort, receivingDatagram, otherDatagrams):
             """)
     #conn.close()
 
-    # create udp socket
-    udp = socket(AF_INET, SOCK_DGRAM)
-    udp.bind(('',receivingDatagram))
-
-    input = [tcp,udp]
-
     while True:
         inputready,outputready,exceptready = select(input,[],[])
 
         for s in inputready:
             if s == tcp:
-                read_tcp(s, webPort)
+                readTCP(s, webPort)
                 #write_tcp(s)
  
             elif s == udp:
-                read_udp(s)
+                readUDP(s)
             else:
                 print "unknown socket:", s
 

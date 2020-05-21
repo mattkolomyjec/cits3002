@@ -500,6 +500,7 @@ public class Station {
         channel.register(selector, SelectionKey.OP_READ);
 
         System.out.println("Reading data from adjacent ports!");
+        
         // Send station names until receieved
         while (!hasReceivedOtherStationNames) {
             sendOtherStationNames();
