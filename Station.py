@@ -92,6 +92,7 @@ def separateUserInputs(body):
 
     requiredDestination = body[startIndex:endIndex]
     requiredDestination.strip()
+    print(requiredDestination)
 
 def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     now = datetime.datetime.now()
@@ -234,30 +235,25 @@ def datagramChecks():
             else:
                 writeUDP(message, i)
 
-def read_tcp(s):
+def read_tcp(s, webPort):
         client,addr = s.accept()
-        data = client.recv(4002)
+        data = client.recv(webPort)
         client.close()
         print "Recv TCP:'%s'" % data
+        separateUserInputs(data)
 
 def read_udp(s):
         data,addr = s.recvfrom(4003)
         print "Recv UDP:'%s'" % data
+        
 
+# Method to send the result
 def write_tcp(s):
-    #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client,addr = s.accept()
-    #s.connect(('localhost', 50000))
-    message = "HTTP/1.1 200 OK\r\n"
-    message += "Content-length: %ld\r\n"
-    message += "Content-Type: text/html\r\n"
-    message += "\r\n"
-    message += "%s"
-    message += "<form method='GET'>"
-    message += "<input name='to' type='text'/>"
-    message += "<input type='submit'/>"
-    message += "</form>"
-    s.sendall(message)
+    client.send('HTTP/1.0 200 OK\n')
+    client.send('Content-Type: text/html\n')
+    client.send('\n') 
+    
 
 def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
@@ -269,6 +265,8 @@ def run(webPort, receivingDatagram, otherDatagrams):
     tcp = socket(AF_INET, SOCK_STREAM)
     tcp.bind(('',webPort))
     tcp.listen(backlog)
+
+    # send html data
     conn, addr = tcp.accept()
     conn.send('HTTP/1.0 200 OK\n')
     conn.send('Content-Type: text/html\n')
@@ -279,11 +277,7 @@ def run(webPort, receivingDatagram, otherDatagrams):
             <input type='submit'/>
             </form>
             """)
-
-    #tcp.connect(('127.0.0.1', webPort))
-    # Send a request to the host
-    #print(message)
-    #tcp.send(message)
+    #conn.close()
 
     # create udp socket
     udp = socket(AF_INET, SOCK_DGRAM)
@@ -296,13 +290,9 @@ def run(webPort, receivingDatagram, otherDatagrams):
 
         for s in inputready:
             if s == tcp:
-                read_tcp(s)
+                read_tcp(s, webPort)
                 #write_tcp(s)
-                # Create a socket
-                
-
-               
-                
+ 
             elif s == udp:
                 read_udp(s)
             else:
@@ -352,22 +342,9 @@ def main():
         index += 1
 
     otherStationPorts = otherStationDatagrams
-
-
-    path.append("BLAH")
-    departureTimes.append("8:45")
-    arrivalTimes.append("7:00")
-    message = constructDatagram(True, "Warwick-Stn", "9:00", 1, path, departureTimes, arrivalTimes, 3004, False, "Thornlie-Stn")
-    readDatagramIn(message)
     
-    
-
-    otherDatagrams = int(sys.argv[4])
     readTimetableIn()
-    requiredDestination = "Cottesloe_Stn "
-    separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1")
-    now = datetime.datetime.now()
-    run(webPort,  receivingDatagram, otherDatagrams)
+    run(webPort,  receivingDatagram, otherStationDatagrams)
 
 if __name__ == '__main__':
     main()
