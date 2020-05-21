@@ -118,6 +118,20 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     departureTimes.append(timetableDepartureTime[index])
     arrivalTimes.append(timetableArrivalTime[index])
 
+def determineOriginDepartureTime(port)
+    now = datetime.datetime.now()
+    index = 0
+    k = 0
+    for i in timetableDepartureTime
+        timetableString = i
+        nextTime = datetime.strptime(timetableString,'%I:%M')
+        if(nextTime > now and timetablePorts[k] == port)
+            index = k
+            break
+        k += 1
+    originDepartureTime = timetableDepartureTime[index]
+    return originDepartureTime
+
 # Verified
 def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
     if(isOutgoing):
