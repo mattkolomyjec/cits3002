@@ -5,6 +5,7 @@ import re
 import time, datetime
 import argparse
 
+# Verified
 def readTimetableIn():
     chosenStation = "google_transit/tt-" + currentStation
     f = open(chosenStation, "r")
@@ -51,8 +52,8 @@ def receiveOtherStationNames(message):
 def removePortIfCovered(message):
     temp = message.split('\n')
     portInReference = int(temp[2])
-    otherStationPorts = []
     global otherStationPorts
+    otherStationPorts = []
     for i in otherStationPorts:
         if(otherStationPorts[i] == portInReference):
             otherStationPorts.remove(i)
@@ -274,9 +275,6 @@ def main():
     global latitude
     global longitude
 
-    # Timetable Variables
-    ## CHECK
-
     # Other Variables
     global datagramClientMessage
     global hasReceievedOtherStationNames 
@@ -288,11 +286,16 @@ def main():
     currentStation = sys.argv[1]
     webPort = int(sys.argv[2])
     receivingDatagram = int(sys.argv[3])
-   
-    otherStationDatagrams = [] # HERE
+    
+    global otherStationDatagrams
+    otherStationDatagrams = [] 
     index = 4
-    for i in otherStationDatagrams:
-        otherStationDatagrams[i] = int(sys.argv[index])
+    while(len(sys.argv)-1 >= index):
+        otherStationDatagrams.append(int(sys.argv[index]))
+        index += 1
+        
+    otherStationPorts = otherStationDatagrams
+
     
 
     otherDatagrams = int(sys.argv[4])
@@ -300,7 +303,6 @@ def main():
     requiredDestination = "Cottesloe_Stn "
     separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1")
     now = datetime.datetime.now()
-    print now.hour, ":", now.minute
     run(webPort,  receivingDatagram, otherDatagrams)
 
 if __name__ == '__main__':
