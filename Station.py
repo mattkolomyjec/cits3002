@@ -5,7 +5,6 @@ import re
 import time, datetime
 import argparse
 
-"""
 def readTimetableIn():
     chosenStation = "google_transit/tt-" + currentStation
     f = open(chosenStation, "r")
@@ -15,28 +14,26 @@ def readTimetableIn():
     global longitude 
     longitude = input[2]
 
+    global timetableDepartureTime
     timetableDepartureTime = []
+    global timetableLine
     timetableLine = []
+    global timetablePlatform
     timetablePlatform = []
+    global timetableArrivalTime
     timetableArrivalTime = []
+    global timetableDestinations
     timetableDestinations = []
 
     input = f.readline().split(',')
-    print(input)
+    while(not "" in input):
+        timetableDepartureTime.append(input[0])
+        timetableLine.append(input[1])
+        timetablePlatform.append(input[2])
+        timetableArrivalTime.append(input[3])
+        timetableDestinations.append(input[4])
+        input = f.readline().split(',')
 
-    for i in input:
-       global timetableDepartureTime.append(i)
-        
-        #print(timetableDepartureTime[0])
-        continue
-        timetableLine.append(i)
-        print(timetableLine[0])
-
-        timetablePlatform(c)
-        timetableArrivalTime(d)
-        timetableDestinations(e)
-        #print(f.read())
-"""
 ## Not Verified
 def addPortsToTimetable(ports):
     for i in timetableDestinations:
@@ -299,7 +296,7 @@ def main():
     
 
     otherDatagrams = int(sys.argv[4])
-    # readTimetableIn()
+    readTimetableIn()
     requiredDestination = "Cottesloe_Stn "
     separateUserInputs("GET /?to=Warwick-Stn HTTP/1.1")
     now = datetime.datetime.now()
