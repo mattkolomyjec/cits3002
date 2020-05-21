@@ -117,6 +117,7 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     departureTimes.append(timetableDepartureTime[index])
     arrivalTimes.append(timetableArrivalTime[index])
 
+# Verified
 def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
     if(isOutgoing):
         result = "Outgoing \n"
@@ -131,6 +132,7 @@ def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numb
         result += i + " " + departureTimes[index] + " " + arrivalTimes[index] + " \n"
     return result
 
+#Verified
 def reset():
     isOutgoing = True
     requiredDestination = ""
@@ -152,6 +154,7 @@ def datagramHasNull(message):
             break
     return result
 
+#Verified
 def readDatagramIn(message):
     reset()
     temp = message.split(" ")
@@ -241,6 +244,21 @@ def read_udp(s):
         data,addr = s.recvfrom(4003)
         print "Recv UDP:'%s'" % data
 
+def write_tcp(s):
+    #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client,addr = s.accept()
+    #s.connect(('localhost', 50000))
+    message = "HTTP/1.1 200 OK\r\n"
+    message += "Content-length: %ld\r\n"
+    message += "Content-Type: text/html\r\n"
+    message += "\r\n"
+    message += "%s"
+    message += "<form method='GET'>"
+    message += "<input name='to' type='text'/>"
+    message += "<input type='submit'/>"
+    message += "</form>"
+    s.sendall(message)
+
 def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
     port = 4002
@@ -251,6 +269,21 @@ def run(webPort, receivingDatagram, otherDatagrams):
     tcp = socket(AF_INET, SOCK_STREAM)
     tcp.bind(('',webPort))
     tcp.listen(backlog)
+    conn, addr = tcp.accept()
+    conn.send('HTTP/1.0 200 OK\n')
+    conn.send('Content-Type: text/html\n')
+    conn.send('\n') 
+    conn.send("""
+            <form method='GET'>
+            <input name='to' type='text'/>
+            <input type='submit'/>
+            </form>
+            """)
+
+    #tcp.connect(('127.0.0.1', webPort))
+    # Send a request to the host
+    #print(message)
+    #tcp.send(message)
 
     # create udp socket
     udp = socket(AF_INET, SOCK_DGRAM)
@@ -264,6 +297,12 @@ def run(webPort, receivingDatagram, otherDatagrams):
         for s in inputready:
             if s == tcp:
                 read_tcp(s)
+                #write_tcp(s)
+                # Create a socket
+                
+
+               
+                
             elif s == udp:
                 read_udp(s)
             else:
@@ -320,6 +359,7 @@ def main():
     arrivalTimes.append("7:00")
     message = constructDatagram(True, "Warwick-Stn", "9:00", 1, path, departureTimes, arrivalTimes, 3004, False, "Thornlie-Stn")
     readDatagramIn(message)
+    
     
 
     otherDatagrams = int(sys.argv[4])
