@@ -1,3 +1,8 @@
+/*
+Matthew Kolomyjec
+22252943
+*/
+
 import java.util.ArrayList;
 import java.net.Socket;
 import java.net.SocketException;

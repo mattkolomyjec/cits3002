@@ -1,3 +1,8 @@
+'''
+Matthew Kolomyjec
+22252943
+'''
+
 from socket import *
 from select import select
 import sys 
