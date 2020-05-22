@@ -424,6 +424,9 @@ def run(webPort, receivingDatagram, otherDatagrams):
 
     input = [tcp,udp]
     
+    '''
+    # Gather port data code 
+    
     print("Reading data from adjacent ports!")
    
     while(hasReceievedOtherStationNames == False):
@@ -435,7 +438,7 @@ def run(webPort, receivingDatagram, otherDatagrams):
             if s == udp:
                 readUDP(s, receivingDatagram)
     
-    
+    '''
     
     print("Server started on port >> " + str(webPort))
 

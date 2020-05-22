@@ -3,6 +3,15 @@ Matthew Kolomyjec
 22252943
 */
 
+/* README
+Program works by HTTP querying the station wanted. 
+E.g. Use the URL http://localhost:4000/?to=Grant_Street_Stn to get a route to Grant Street Station.
+
+The program will first gather information about its neighbouring stations.
+You cannot query a route until data from all neighbouring stations is complete. 
+Once boot-up has occured, a query can be made. 
+*/
+
 import java.util.ArrayList;
 import java.net.Socket;
 import java.net.SocketException;
@@ -182,8 +191,6 @@ public class Station {
 
         String current = currentStation.trim();
         String required = requiredDestination.trim();
-        required = required.replaceAll("[\\n\\t ]", "");
-        System.out.println(required);
         if (current.contains(required)) {
             result = true;
         }
@@ -362,59 +369,56 @@ public class Station {
      * @param message the datagram message sent to the station
      */
     public void readDatagramIn(String message) {
-        reset();
-        // try {
-        // readTimetableIn();
-        // COME BACK!!!!!!
-        // } catch (IOException e) {
-        // e.printStackTrace();
-        // }
+        String tester[] = message.split(" ");
+        if (!(tester[2].contains("/"))) {
+            reset();
 
-        String temp[] = message.split(" ");
-        if (temp[0].contains("Outgoing")) {
-            isOutgoing = true;
-        } else {
-            isOutgoing = false;
-        }
-        requiredDestination = temp[1];
-        System.out.println(requiredDestination);
-        originDepartureTime = temp[2];
+            String temp[] = message.split(" ");
+            if (temp[0].contains("Outgoing")) {
+                isOutgoing = true;
+            } else {
+                isOutgoing = false;
+            }
+            requiredDestination = temp[1];
 
-        String trimString = temp[3];
-        trimString.trim();
-        numberStationsStoppedAt = Integer.parseInt(trimString);
+            originDepartureTime = temp[2];
 
-        trimString = "";
+            String trimString = temp[3];
+            trimString.trim();
+            numberStationsStoppedAt = Integer.parseInt(trimString);
 
-        trimString = temp[4];
-        trimString.trim();
-        lastNodePort = Integer.parseInt(trimString);
+            trimString = "";
 
-        trimString = "";
+            trimString = temp[4];
+            trimString.trim();
+            lastNodePort = Integer.parseInt(trimString);
 
-        trimString = temp[5];
-        trimString.trim();
-        if (trimString.contains("true") || trimString.contains("True")) {
-            hasReachedFinalStation = true;
-        } else {
-            hasReachedFinalStation = false;
-        }
+            trimString = "";
 
-        trimString = "";
-        trimString = temp[6];
-        trimString.trim();
-        homeStation = trimString;
+            trimString = temp[5];
+            trimString.trim();
+            if (trimString.contains("true") || trimString.contains("True")) {
+                hasReachedFinalStation = true;
+            } else {
+                hasReachedFinalStation = false;
+            }
 
-        int pathIndex = 7;
-        int departureIndex = 8;
-        int arrivalIndex = 9;
-        for (int i = 0; i < numberStationsStoppedAt; i++) {
-            path.add(temp[pathIndex]);
-            pathIndex += 3;
-            departureTimes.add(temp[departureIndex]);
-            departureIndex += 3;
-            arrivalTimes.add(temp[arrivalIndex]);
-            arrivalIndex += 3;
+            trimString = "";
+            trimString = temp[6];
+            trimString.trim();
+            homeStation = trimString;
+
+            int pathIndex = 7;
+            int departureIndex = 8;
+            int arrivalIndex = 9;
+            for (int i = 0; i < numberStationsStoppedAt; i++) {
+                path.add(temp[pathIndex]);
+                pathIndex += 3;
+                departureTimes.add(temp[departureIndex]);
+                departureIndex += 3;
+                arrivalTimes.add(temp[arrivalIndex]);
+                arrivalIndex += 3;
+            }
         }
     }
 
@@ -426,8 +430,6 @@ public class Station {
      */
     public void datagramChecks() throws IOException {
         String message;
-        // System.out.println(isFinalStation());
-        // System.out.println(requiredDestination);
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) {
 
             isOutgoing = false;
@@ -591,8 +593,6 @@ public class Station {
         ServerSocketChannel serverChannel = (ServerSocketChannel) key.channel();
         SocketChannel channel = serverChannel.accept();
         channel.configureBlocking(false);
-        Socket socket = channel.socket();
-        SocketAddress remoteAddr = socket.getRemoteSocketAddress();
 
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         String date = new Date().toString() + "<br>";
@@ -631,6 +631,7 @@ public class Station {
         byte[] data = new byte[numRead];
         System.arraycopy(buffer.array(), 0, data, 0, numRead);
         String result = new String(data);
+
         separateUserInputs(result);
         channel.register(this.selector, SelectionKey.OP_WRITE);
 
@@ -644,7 +645,9 @@ public class Station {
                     numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation,
                     homeStation);
             writeUDP(message, otherStationDatagrams[i]);
+
         }
+
     }
 
     /***
@@ -674,11 +677,12 @@ public class Station {
             }
 
         } else {
+            String tester[] = msg.split(" ");
             if (!datagramHasNull(msg) && hasReceivedOtherStationNames)
                 readDatagramIn(msg);
             if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                 channel.register(this.selector, SelectionKey.OP_WRITE);
-            } else {
+            } else if (!(tester[2].contains("/"))) {
                 datagramChecks();
             }
         }
