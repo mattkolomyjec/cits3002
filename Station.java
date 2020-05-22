@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalTime;
 
+// java Station Mosman_Park_Stn 4090 6060 8989
 public class Station {
 
     // Message Variables
@@ -174,6 +175,7 @@ public class Station {
      */
     public boolean isFinalStation() {
         boolean result = false;
+        System.out.println(requiredDestination);
         String current = currentStation.trim();
         String required = requiredDestination.trim();
         if (current.contains(required)) {
@@ -361,6 +363,7 @@ public class Station {
         // } catch (IOException e) {
         // e.printStackTrace();
         // }
+
         String temp[] = message.split(" ");
         if (temp[0].contains("Outgoing")) {
             isOutgoing = true;
@@ -416,6 +419,8 @@ public class Station {
      */
     public void datagramChecks() throws IOException {
         String message;
+        // System.out.println(isFinalStation());
+        // System.out.println(requiredDestination);
         if (isFinalStation() && isOutgoing && !hasReachedFinalStation) { // State 1 - Reached required destination, now
                                                                          // need to travel back
             // to start nod
@@ -500,37 +505,24 @@ public class Station {
         channel.register(selector, SelectionKey.OP_READ);
 
         System.out.println("Reading data from adjacent ports!");
-        
-        // Send station names until receieved
-        while (!hasReceivedOtherStationNames) {
-            sendOtherStationNames();
-
-            int readyCount = selector.select();
-            if (readyCount == 0) {
-                sendOtherStationNames();
-                continue;
-            }
-
-            Set<SelectionKey> readyKeys = selector.selectedKeys();
-            Iterator iterator = readyKeys.iterator();
-            while (iterator.hasNext()) {
-                SelectionKey key = (SelectionKey) iterator.next();
-
-                iterator.remove();
-
-                if (!key.isValid()) {
-                    continue;
-                }
-
-                if (key.isReadable()) {
-                    sendOtherStationNames();
-                    if (channel.keyFor(selector) == key) {
-                        this.readUDP(key);
-                    }
-                }
-            }
-        }
-
+        /*
+         * // Send station names until receieved while (!hasReceivedOtherStationNames) {
+         * sendOtherStationNames();
+         * 
+         * int readyCount = selector.select(); if (readyCount == 0) {
+         * sendOtherStationNames(); continue; }
+         * 
+         * Set<SelectionKey> readyKeys = selector.selectedKeys(); Iterator iterator =
+         * readyKeys.iterator(); while (iterator.hasNext()) { SelectionKey key =
+         * (SelectionKey) iterator.next();
+         * 
+         * iterator.remove();
+         * 
+         * if (!key.isValid()) { continue; }
+         * 
+         * if (key.isReadable()) { sendOtherStationNames(); if (channel.keyFor(selector)
+         * == key) { this.readUDP(key); } } } }
+         */
         System.out.println("Server started on port >> " + webPort);
 
         while (true) {
@@ -676,6 +668,7 @@ public class Station {
         String msg = new String(bytes);
         // System.out.println("Client at " + remoteAdd + " sent: " + msg);
         // channel.send(buffer, remoteAdd);
+        System.out.println(msg);
 
         if (msg.startsWith("#")) {
             removePortIfCovered(msg);
@@ -687,7 +680,7 @@ public class Station {
             }
 
         } else {
-            if (msg != null && !datagramHasNull(msg) && hasReceivedOtherStationNames)
+            if (msg != null && !datagramHasNull(msg) /* && hasReceivedOtherStationNames */) // CHANGE !!
                 readDatagramIn(msg);
             if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                 channel.register(this.selector, SelectionKey.OP_WRITE);
@@ -770,6 +763,7 @@ public class Station {
         }
         try {
             Station station = new Station(origin, webPort, stationDatagrams, otherStationDatagrams);
+            // station.currentStation = origin;
             station.run(webPort, stationDatagrams, otherStationDatagrams);
         } catch (IOException e) {
             e.printStackTrace();
