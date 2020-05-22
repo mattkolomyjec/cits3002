@@ -1,5 +1,4 @@
 from socket import *
-#import socket
 from select import select
 import sys 
 import re
@@ -7,8 +6,7 @@ import time
 from datetime import datetime
 import argparse
 
-# python ./Station.py Cottesloe_Stn 4010 8989 4009
-
+# Message Variables
 requiredDestination = None
 isOutgoing = None
 originDepartureTime = None
@@ -33,9 +31,14 @@ datagramClientMessage = None
 hasReceievedOtherStationNames = False
 alreadyWritten = False
 timetablePorts = []
+hasReturnedHome = False
 
 
-# Verified
+"""A method to read the Transperth timetable data in
+
+:param currentStation: the current station
+
+"""
 def readTimetableIn(currentStation):
     chosenStation = "google_transit/tt-" + currentStation
     f = open(chosenStation, "r")
@@ -65,27 +68,41 @@ def readTimetableIn(currentStation):
         timetableDestinations.append(input[4])
         input = f.readline().split(',')
 
+"""A method to add the receieving port numbers to their corresponding station in
+    the transperth timetable data
 
+:param ports: a map with the adjacent station as a key and their recieving port number
+
+"""
 def addPortsToTimetable(ports):
     index = 0
+    print(len(timetableDestinations))
     for i in timetableDestinations:
         currentKey = timetableDestinations[index]
         currentKey = currentKey.rstrip("\n")
         if(currentKey in ports.keys()):
             timetablePorts.insert(index, ports[currentKey])
-            index += 1
-            continue
-        else:
-            #timetablePorts.insert(index, 0)
-            index += 1
-            continue
+        index += 1
+         
+    print(timetablePorts) 
+    print(len(timetablePorts))
+    print(timetablePorts[1])
 
-## Verified
+"""A method to receive the names and ports of the adjacent stations
+
+:param message: the message sent from the adjacent station
+
+"""
 def receiveOtherStationNames(message):
     temp = message.split('\n')
     map = {temp[1]: temp[2]}
     addPortsToTimetable(map)
 
+"""A method to remove a port from the required ports if it has not been covered yet
+
+:param message: the message sent from the adjacent station
+
+"""
 def removePortIfCovered(message):
     temp = message.split('\n')
     portInReference = int(temp[2])
@@ -96,12 +113,19 @@ def removePortIfCovered(message):
             otherStationPorts.remove(i)
             break
 
+"""A method to send adjacent stations the station name and port number of this station
+
+"""
 def sendOtherStationNames():
     message = "#" + "\n" + currentStation + "\n" + str(receivingDatagram)
     for i in otherStationDatagrams:
         writeUDP(message, i)
 
-# Verified
+"""A method to determine if the required station of a given datagram is equal to the current station
+
+:return result: whether it is the final station or not
+
+"""
 def isFinalStation():
     result = False
     current = currentStation.strip()
@@ -110,11 +134,20 @@ def isFinalStation():
         result = True
     return result
 
-# Python3 program to Split string into characters https://www.geeksforgeeks.org/python-split-string-into-list-of-characters/
+"""A method to split a string into individual characters. Courtesy of:
+https://www.geeksforgeeks.org/python-split-string-into-list-of-characters/
+
+:return result: the split up word
+
+"""
 def split(word): 
     return [char for char in word]  
 
-# Verified
+"""A method to split the GET request and extract the required destination
+
+:return requiredDestination: the required destination
+
+"""
 def separateUserInputs(body):
     temp = split(body)
     startIndex = 0
@@ -131,7 +164,9 @@ def separateUserInputs(body):
     requiredDestination.strip() # not a global variable?
     return requiredDestination
     
+"""A method to add the current station to the datagram
 
+"""
 def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     now = datetime.now()
     #print now.hour, ":", now.minute
@@ -141,7 +176,6 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     for i in timetableDepartureTime:
         timetableString = i
         datetime_object = datetime.strptime(timetableString,'%I:%M')
-        #print(datetime_object)
         if(arrivalTimes.size() > 0):
             if(datetime_object > now and timetablePorts[i] == portNumber):
                 index = i
@@ -156,17 +190,19 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     departureTimes.append(timetableDepartureTime[index])
     arrivalTimes.append(timetableArrivalTime[index])
 
+"""A method to determine the origin departure time
+
+:param port: the port number in reference
+:return originDepartureTime: the origin departure time
+
+"""
 def determineOriginDepartureTime(port):
     now = datetime.now()
-  
-    #datetime_object = datetime.strptime(now,'%I:%M')
-    #rint(now)
     index = 0
     k = 0
     for i in timetableDepartureTime:
         timetableString = i
         nextTime = datetime.strptime(timetableString,'%H:%M')
-        #print(nextTime > now)
         if(nextTime > now and timetablePorts[k] == port):
             index = k
             break
@@ -174,7 +210,22 @@ def determineOriginDepartureTime(port):
     originDepartureTime = timetableDepartureTime[index]
     return originDepartureTime
 
-# Verified
+"""A method to determine the origin departure time
+
+:param isOutgoing: whether the datagram is outgoing or incoming
+:param requiredDestination: the required destination of the datagram
+:param originDepartureTime: the origin departure time of the datagram
+:param numberStationsStoppedAt: the number of stations the datagram has stopped at
+:param path: the path the datagram travlled along
+:param departureTimes: the times of departure of the datagram along the path
+:param arrivalTimes: the times of arrival of the datagram along the path
+:param lastNodePort: the receiving port of the last station passed through
+:param hasReachedFinalStation: whether the datagram has reached the its final station
+:param: homeStation: the home station of the datagram
+
+:return result: the constructed datagram
+
+"""
 def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
     if(isOutgoing):
         result = "Outgoing \n"
@@ -189,7 +240,9 @@ def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numb
         result += i + " " + departureTimes[index] + " " + arrivalTimes[index] + " \n"
     return result
 
-#Verified
+"""A method to reset the message variables
+
+"""
 def reset():
     isOutgoing = True
     requiredDestination = ""
@@ -202,6 +255,12 @@ def reset():
     hasReachedFinalStation = False
     homeStation = ""
 
+"""A method to check the incoming datagram does not have a null variable
+
+:param message: the incoming datagram to be tested
+:return result: whether the datagram has null in it or not
+
+"""
 def datagramHasNull(message):
     result = False
     temp = message.split(' ')
@@ -211,7 +270,11 @@ def datagramHasNull(message):
             break
     return result
 
-#Verified
+"""A method to read an incoming datagram in
+
+:param message: the incoming datagram to be tested
+
+"""
 def readDatagramIn(message):
     reset()
     print(message)
@@ -243,7 +306,7 @@ def readDatagramIn(message):
     trimString = temp[5]
     trimString.strip()
     global hasReachedFinalStation
-    if("true" in trimString):
+    if("true" in trimString or "True" in trimString):
         hasReachedFinalStation = True
     else:
         hasReachedFinalStation = False
@@ -274,6 +337,9 @@ def readDatagramIn(message):
         arrivalIndex += 3
         i += 1
 
+"""A method to determine the next destination of a given datagram
+
+"""
 def datagramChecks():
     if(isFinalStation() and isOutgoing and hasReachedFinalStation == False):
         isOutgoing = False
@@ -305,31 +371,40 @@ def datagramChecks():
             else:
                 writeUDP(message, i)
 
+"""A method to read from TCP port
+
+:param s: the socket in reference via select()
+:param webPort: the port to read from
+
+"""
 def readTCP(s, webPort):
         client,addr = s.accept()
         data = client.recv(webPort)
-        #client.close()
         for line in data.splitlines():
-            requiredDestination = separateUserInputs(line) #### MADE separateUserInputs return requiredDestination
+            requiredDestination = separateUserInputs(line)
             break
-        
-        # Flood to all ports
+        print(requiredDestination)
+
         lastNodePort = receivingDatagram
         isOutgoing = True
         homeStation = currentStation
         numberStationsStoppedAt = 0
         hasReachedFinalStation = False
-        #print(otherStationDatagrams)
+
         for i in otherStationDatagrams:
             originDepartureTime = determineOriginDepartureTime(i)
             message = constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation)
             print(message)
             writeUDP(message, i)
 
+"""A method to check the read an incoming UDP connection
+
+:param s: the socket in reference via select()
+:param receivingDatagram: the port to read from
+
+"""
 def readUDP(s, receivingDatagram):
-        data,addr = s.recvfrom(receivingDatagram)
-        #print "Recv UDP:'%s'" % data
-        
+        data,addr = s.recvfrom(receivingDatagram) 
         if(data.startswith('#')):
             removePortIfCovered(data)
             if(len(otherStationPorts) == 0):
@@ -338,93 +413,49 @@ def readUDP(s, receivingDatagram):
             else:
                 receiveOtherStationNames(data)
         else:
-            if(datagramHasNull(data) == False): #and hasReceievedOtherStationNames == True): **********************
+            if(datagramHasNull(data) == False): #and hasReceievedOtherStationNames == True): 
                 readDatagramIn(data)
             if(hasReachedFinalStation and isOutgoing == False and homeStation in currentStation):
-                ## REGISTER CHANNEL WRITING?
-                writeTCP(s)
+                global hasReturnedHome
+                hasReturnedHome = True
             else:
                 datagramChecks()
 
+"""A method to write an outbound datagram
 
+:param message: the message to send
+:param port: the port to send to
+
+"""
 def writeUDP(message, port):
     serverAddressPort   = ("127.0.0.1", port)
     udp.sendto(message, serverAddressPort)
-    #localIP     = "127.0.0.1"
-    #UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    
 
-# Method to send the result
-def writeTCP(s):
-    
-    #client,addr = s.accept()
-    conn, addr = tcp.accept()
-    conn.send('HTTP/1.0 200 OK\n')
-    conn.send('Content-Type: text/html\n')
-    conn.send('\n')
-    conn.send("""
-    <html>
-    <body>
-    <h1>Hello World</h1> this is my server!
-    </body>
-    </html>
-    """) # Use triple-quote string.
-   # conn.send("""
-       #     <form method='GET'>
-      #      <input name='to' type='text'/>
-      #      <input type='submit'/>
-      #      </form>
-       #     """)
-    #conn.send("""
-      #      <br>
-      #      <br> <strong> Destination:</strong> """)
-    
-    #conn.send(requiredDestination)
-    #conn.send("""
-     #       <br> <strong> Origin:</strong> """
-    #conn.send(currentStation)
-    #conn.send("""
-    #<div> <br> <strong> Route </strong> (Departing Time | Stop | Arrival Time) </div>\n """
-    #index = 0
-    #for i in path:
-     #   conn.send('<br>')
-     #   conn.send('Departing at: <strong>')
-     #   conn.send(departureTimes[index])
-     #   conn.send('</strong>; To: ')
-    #    conn.send('<strong>')
-     #   conn.send(i)
-     #   conn.send('</strong>; Arriving at:  <strong>')
-     #   conn.send(arrivalTimes[index])
-     #   conn.send('</strong>;')
-    #   index += 1
-    #conn.send('<br>')
-    #conn.send('________________________________________')
-    #conn.send('<br>')
-    print("REACHED")
-    
+"""A method to run the core Select() server
+
+:param webPort: the port to post/read HTML from
+:param receivingDatagram: the port the program will receive other datagrams from
+:param otherDatagrams: the receiving UDP ports of adjacent stations
+
+"""  
 def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
-    #port = 4002
     size = 8000
     backlog = 5
 
-    # create tcp socket
     global tcp
     tcp = socket(AF_INET, SOCK_STREAM)
     tcp.bind(('',webPort))
     tcp.listen(backlog)
 
-    # create udp socket
     global udp
     udp = socket(AF_INET, SOCK_DGRAM)
     udp.bind(('',receivingDatagram))
 
     input = [tcp,udp]
-    '''    
+    
     print("Reading data from adjacent ports!")
-
    
-    # Send station names until receieved
     while(hasReceievedOtherStationNames == False):
         sendOtherStationNames()
 
@@ -433,13 +464,11 @@ def run(webPort, receivingDatagram, otherDatagrams):
         for s in inputready:
             if s == udp:
                 readUDP(s, receivingDatagram)
-    '''
-    print("Server started on port >> " + str(webPort))
     
+    
+    
+    print("Server started on port >> " + str(webPort))
 
-    # send html data
-    global conn
-    global addr
     conn, addr = tcp.accept()
     conn.send('HTTP/1.0 200 OK\n')
     conn.send('Content-Type: text/html\n')
@@ -450,43 +479,84 @@ def run(webPort, receivingDatagram, otherDatagrams):
             <input type='submit'/>
             </form>
             """)
-    #conn.close()
+    conn.recv(1000)
+    conn.close()
+    
 
     while True:
-        inputready,outputready,exceptready = select(input,[],[])
+        while (hasReturnedHome == False):
+            print("THIS IS")
+            print(hasReturnedHome)
+            inputready,outputready,exceptready = select(input,[],[])
 
-        for s in inputready:
-            if s == tcp:
-                readTCP(s, webPort)
-                #write_tcp(s)
-            
-            #if s == tcp and hasReachedFinalStation and isOutgoing == False and homeStation in currentStation:
-              #  writeTCP(s)
+            for s in inputready:
+                if s == tcp:
+                    readTCP(s, webPort)
+                        #write_tcp(s)
+                elif s == udp:
+                    readUDP(s, receivingDatagram)
+                else:
+                    print "unknown socket:", s
+        
+        if(hasReturnedHome == True):
+                tcp = socket(AF_INET, SOCK_STREAM)
+                tcp.bind(('',webPort))
+                tcp.listen(backlog)
+                
+                conn, addr = tcp.accept()
+                print("ELFINITO")
+                print(conn)
+                conn.send('HTTP/1.0 200 OK\n')
+                conn.send('Content-Type: text/html\n')
+                conn.send('\n') 
+                conn.send("""
+                        <form method='GET'>
+                        <input name='to' type='text'/>
+                        <input type='submit'/>
+                        </form>
+                        """)
+                conn.send("""
+                        <br>
+                        <br> <strong> Destination:</strong> """)
+                conn.send('{requiredDestination}')
+                conn.send("""
+                        <br> <strong> Origin:</strong> """)
+                conn.send('{currentStation}')
+                conn.send("""
+                        <div> <br> <strong> Route </strong> (Departing Time | Stop | Arrival Time) </div>\n """)
+                index = 0
+                for i in path:
+                    conn.send('<br>')
+                    conn.send('Departing at: <strong>')
+                    conn.send('{departureTimes[index]}')
+                    conn.send('</strong>; To: ')
+                    conn.send('<strong>')
+                    conn.send('{i}')
+                    conn.send('</strong>; Arriving at:  <strong>')
+                    conn.send('{arrivalTimes[index]}')
+                    conn.send('</strong>;')
+                index += 1
+                conn.send('<br>')
+                conn.send('________________________________________')
+                conn.close()
+                conn.recv(1000)
+                conn.close()
+                print("MADE IT THIS FAR")
+                
+"""The main method
 
-            elif s == udp:
-                readUDP(s, receivingDatagram)
-            else:
-                print "unknown socket:", s
-
+"""
 def main():
     # Message Variables
     requiredDestination
     isOutgoing
     originDepartureTime
     numberStationsStoppedAt
-    #path
     path = []
-    #departureTimes
     departureTimes = []
-    #global arrivalTimes
     arrivalTimes = []
     lastNodePort
     hasReachedFinalStation
-    #homeStation = "Cottesloe"
-
-    
-
-    print(homeStation)
 
     # Station Variables
     global currentStation 
@@ -498,19 +568,13 @@ def main():
 
     # Other Variables
     datagramClientMessage
-    #global hasReceievedOtherStationNames 
     hasReceievedOtherStationNames = False
-    #alreadyWritten
     alreadyWritten = False
-    #timetablePorts
     timetablePorts = []
 
-    
     currentStation = sys.argv[1]
-    
     webPort = int(sys.argv[2])
     receivingDatagram = int(sys.argv[3])
-    
     
     otherStationDatagrams = [] 
     index = 4

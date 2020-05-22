@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalTime;
 
-// java Station Mosman_Park_Stn 4090 6060 8989
 public class Station {
 
     // Message Variables
@@ -175,9 +174,11 @@ public class Station {
      */
     public boolean isFinalStation() {
         boolean result = false;
-        System.out.println(requiredDestination);
+
         String current = currentStation.trim();
         String required = requiredDestination.trim();
+        required = required.replaceAll("[\\n\\t ]", "");
+        System.out.println(required);
         if (current.contains(required)) {
             result = true;
         }
@@ -371,6 +372,7 @@ public class Station {
             isOutgoing = false;
         }
         requiredDestination = temp[1];
+        System.out.println(requiredDestination);
         originDepartureTime = temp[2];
 
         String trimString = temp[3];
@@ -387,7 +389,7 @@ public class Station {
 
         trimString = temp[5];
         trimString.trim();
-        if (trimString.contains("true")) {
+        if (trimString.contains("true") || trimString.contains("True")) {
             hasReachedFinalStation = true;
         } else {
             hasReachedFinalStation = false;
@@ -505,27 +507,43 @@ public class Station {
         channel.register(selector, SelectionKey.OP_READ);
 
         System.out.println("Reading data from adjacent ports!");
-        /*
-         * // Send station names until receieved while (!hasReceivedOtherStationNames) {
-         * sendOtherStationNames();
-         * 
-         * int readyCount = selector.select(); if (readyCount == 0) {
-         * sendOtherStationNames(); continue; }
-         * 
-         * Set<SelectionKey> readyKeys = selector.selectedKeys(); Iterator iterator =
-         * readyKeys.iterator(); while (iterator.hasNext()) { SelectionKey key =
-         * (SelectionKey) iterator.next();
-         * 
-         * iterator.remove();
-         * 
-         * if (!key.isValid()) { continue; }
-         * 
-         * if (key.isReadable()) { sendOtherStationNames(); if (channel.keyFor(selector)
-         * == key) { this.readUDP(key); } } } }
-         */
+
+        // Send station names until receieved
+
+        while (!hasReceivedOtherStationNames) {
+            sendOtherStationNames();
+
+            int readyCount = selector.select();
+            if (readyCount == 0) {
+                sendOtherStationNames();
+                continue;
+            }
+
+            Set<SelectionKey> readyKeys = selector.selectedKeys();
+            Iterator iterator = readyKeys.iterator();
+            while (iterator.hasNext()) {
+                SelectionKey key = (SelectionKey) iterator.next();
+
+                iterator.remove();
+
+                if (!key.isValid()) {
+                    continue;
+                }
+
+                if (key.isReadable()) {
+                    sendOtherStationNames();
+                    if (channel.keyFor(selector) == key) {
+                        this.readUDP(key);
+                    }
+                }
+            }
+        }
+
         System.out.println("Server started on port >> " + webPort);
 
-        while (true) {
+        while (true)
+
+        {
             // wait for events
             int readyCount = selector.select();
             if (readyCount == 0) {
@@ -668,7 +686,7 @@ public class Station {
         String msg = new String(bytes);
         // System.out.println("Client at " + remoteAdd + " sent: " + msg);
         // channel.send(buffer, remoteAdd);
-        System.out.println(msg);
+        // System.out.println(msg);
 
         if (msg.startsWith("#")) {
             removePortIfCovered(msg);
@@ -680,7 +698,7 @@ public class Station {
             }
 
         } else {
-            if (msg != null && !datagramHasNull(msg) /* && hasReceivedOtherStationNames */) // CHANGE !!
+            if (!datagramHasNull(msg) && hasReceivedOtherStationNames) // CHANGE !!
                 readDatagramIn(msg);
             if (hasReachedFinalStation && !isOutgoing && currentStation.contains(homeStation)) {
                 channel.register(this.selector, SelectionKey.OP_WRITE);
