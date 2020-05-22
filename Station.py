@@ -35,9 +35,7 @@ hasReturnedHome = False
 
 
 """A method to read the Transperth timetable data in
-
 :param currentStation: the current station
-
 """
 def readTimetableIn(currentStation):
     chosenStation = "google_transit/tt-" + currentStation
@@ -70,9 +68,7 @@ def readTimetableIn(currentStation):
 
 """A method to add the receieving port numbers to their corresponding station in
     the transperth timetable data
-
 :param ports: a map with the adjacent station as a key and their recieving port number
-
 """
 def addPortsToTimetable(ports):
     index = 0
@@ -89,9 +85,7 @@ def addPortsToTimetable(ports):
     print(timetablePorts[1])
 
 """A method to receive the names and ports of the adjacent stations
-
 :param message: the message sent from the adjacent station
-
 """
 def receiveOtherStationNames(message):
     temp = message.split('\n')
@@ -99,9 +93,7 @@ def receiveOtherStationNames(message):
     addPortsToTimetable(map)
 
 """A method to remove a port from the required ports if it has not been covered yet
-
 :param message: the message sent from the adjacent station
-
 """
 def removePortIfCovered(message):
     temp = message.split('\n')
@@ -114,7 +106,6 @@ def removePortIfCovered(message):
             break
 
 """A method to send adjacent stations the station name and port number of this station
-
 """
 def sendOtherStationNames():
     message = "#" + "\n" + currentStation + "\n" + str(receivingDatagram)
@@ -122,9 +113,7 @@ def sendOtherStationNames():
         writeUDP(message, i)
 
 """A method to determine if the required station of a given datagram is equal to the current station
-
 :return result: whether it is the final station or not
-
 """
 def isFinalStation():
     result = False
@@ -136,17 +125,13 @@ def isFinalStation():
 
 """A method to split a string into individual characters. Courtesy of:
 https://www.geeksforgeeks.org/python-split-string-into-list-of-characters/
-
 :return result: the split up word
-
 """
 def split(word): 
     return [char for char in word]  
 
 """A method to split the GET request and extract the required destination
-
 :return requiredDestination: the required destination
-
 """
 def separateUserInputs(body):
     temp = split(body)
@@ -165,7 +150,6 @@ def separateUserInputs(body):
     return requiredDestination
     
 """A method to add the current station to the datagram
-
 """
 def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     now = datetime.now()
@@ -191,10 +175,8 @@ def addCurrentStationToDatagram(path, departureTimes, arrivalTimes, portNumber):
     arrivalTimes.append(timetableArrivalTime[index])
 
 """A method to determine the origin departure time
-
 :param port: the port number in reference
 :return originDepartureTime: the origin departure time
-
 """
 def determineOriginDepartureTime(port):
     now = datetime.now()
@@ -211,7 +193,6 @@ def determineOriginDepartureTime(port):
     return originDepartureTime
 
 """A method to determine the origin departure time
-
 :param isOutgoing: whether the datagram is outgoing or incoming
 :param requiredDestination: the required destination of the datagram
 :param originDepartureTime: the origin departure time of the datagram
@@ -222,9 +203,7 @@ def determineOriginDepartureTime(port):
 :param lastNodePort: the receiving port of the last station passed through
 :param hasReachedFinalStation: whether the datagram has reached the its final station
 :param: homeStation: the home station of the datagram
-
 :return result: the constructed datagram
-
 """
 def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numberStationsStoppedAt, path, departureTimes, arrivalTimes, lastNodePort, hasReachedFinalStation, homeStation):
     if(isOutgoing):
@@ -241,7 +220,6 @@ def constructDatagram(isOutgoing, requiredDestination, originDepartureTime, numb
     return result
 
 """A method to reset the message variables
-
 """
 def reset():
     isOutgoing = True
@@ -256,10 +234,8 @@ def reset():
     homeStation = ""
 
 """A method to check the incoming datagram does not have a null variable
-
 :param message: the incoming datagram to be tested
 :return result: whether the datagram has null in it or not
-
 """
 def datagramHasNull(message):
     result = False
@@ -271,9 +247,7 @@ def datagramHasNull(message):
     return result
 
 """A method to read an incoming datagram in
-
 :param message: the incoming datagram to be tested
-
 """
 def readDatagramIn(message):
     reset()
@@ -338,7 +312,6 @@ def readDatagramIn(message):
         i += 1
 
 """A method to determine the next destination of a given datagram
-
 """
 def datagramChecks():
     if(isFinalStation() and isOutgoing and hasReachedFinalStation == False):
@@ -372,10 +345,8 @@ def datagramChecks():
                 writeUDP(message, i)
 
 """A method to read from TCP port
-
 :param s: the socket in reference via select()
 :param webPort: the port to read from
-
 """
 def readTCP(s, webPort):
         client,addr = s.accept()
@@ -398,10 +369,8 @@ def readTCP(s, webPort):
             writeUDP(message, i)
 
 """A method to check the read an incoming UDP connection
-
 :param s: the socket in reference via select()
 :param receivingDatagram: the port to read from
-
 """
 def readUDP(s, receivingDatagram):
         data,addr = s.recvfrom(receivingDatagram) 
@@ -422,21 +391,17 @@ def readUDP(s, receivingDatagram):
                 datagramChecks()
 
 """A method to write an outbound datagram
-
 :param message: the message to send
 :param port: the port to send to
-
 """
 def writeUDP(message, port):
     serverAddressPort   = ("127.0.0.1", port)
     udp.sendto(message, serverAddressPort)
 
 """A method to run the core Select() server
-
 :param webPort: the port to post/read HTML from
 :param receivingDatagram: the port the program will receive other datagrams from
 :param otherDatagrams: the receiving UDP ports of adjacent stations
-
 """  
 def run(webPort, receivingDatagram, otherDatagrams):
     host = ''
@@ -544,7 +509,6 @@ def run(webPort, receivingDatagram, otherDatagrams):
                 print("MADE IT THIS FAR")
                 
 """The main method
-
 """
 def main():
     # Message Variables
